@@ -1270,8 +1270,8 @@ async function fbPullData(){
   try{
     const snap=await fbDb.ref(FB_PATH).once('value');
     const data=snap.val();
-    if(data&&data.D&&Array.isArray(data.MK)){
-      applyLoadedData(data.D,data.MK);
+    if(data&&data.D){
+      applyLoadedData(data.D, Array.isArray(data.MK)?data.MK:[]);
       localStorage.setItem(KEY,JSON.stringify({D,MK}));
       recheckAllMakeups();render();
       updateFbStatus('connected','🟢 更新済 '+(new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})));
