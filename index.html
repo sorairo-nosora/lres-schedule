@@ -1551,7 +1551,8 @@ function printSchedule(){
 }
 
 load();recheckAllMakeups();
-localStorage.setItem(KEY,JSON.stringify({D,MK}));
+// localStorageに既存データがあった場合のみ上書き保存（キャッシュクリア後の空データ上書きを防止）
+if(localStorage.getItem(KEY)){localStorage.setItem(KEY,JSON.stringify({D,MK}));}
 _lastSnapshot=JSON.stringify({D,MK});
 render();
 window.addEventListener('resize',()=>render());
