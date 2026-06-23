@@ -413,7 +413,8 @@ function isHol(ds){return Array.isArray(D.hols)&&D.hols.includes(ds);}
 function isTempHol(ds){return (D.tempHols||[]).includes(ds);}
 function isAnyHol(ds){return isHol(ds)||isTempHol(ds);}
 function isSpec(cid,ds){return D.specials.some(s=>s.date===ds&&s.cid===cid);}
-function dayClasses(dow){return D.classes.filter(c=>c.dow===dow).sort((a,b)=>pt(a.start)-pt(b.start));}
+let _viewClasses=null; // 表示中の週のクラス構成（スナップショットまたは現在）
+function dayClasses(dow){return (_viewClasses||D.classes).filter(c=>c.dow===dow).sort((a,b)=>pt(a.start)-pt(b.start));}
 function getA(cid,ds,n){return D.att[cid+'|'+ds+'|'+n]||'present';}
 function setA(cid,ds,n,v){D.att[cid+'|'+ds+'|'+n]=v;}
 function hasNote(cls,n){return !!(cls.sd&&cls.sd[n]&&cls.sd[n].note);}
@@ -559,6 +560,10 @@ function monthBadges(dow,year,month){
 }
 
 function render(){
+  // 過去の確定週はスナップショットのクラス構成を使用
+  const wsKey=getWsKey();
+  const isPastConfirmed=isConfirmed()&&ws<monday(new Date());
+  _viewClasses=(isPastConfirmed&&D.snapshots&&D.snapshots[wsKey])||null;
   // 画面サイズに応じてPPM・グリッド幅を再計算
   if(!_printMode){PPM=calcPPM();GH=(GE-GS)*PPM;}
   const minW=_printMode?0:calcGridMinW();
@@ -570,6 +575,9 @@ function render(){
   const dates=wdates();
   const today=fmt(new Date());
   document.getElementById('wlabel').textContent=`${jp(dates[0])} 〜 ${jp(dates[dates.length-1])}`;
+  // 前週ボタン: 3ヶ月制限
+  const prevBtn=document.querySelector('.header-nav .btn');
+  if(prevBtn){const atLimit=addD(ws,-7)<getMinWeek();prevBtn.disabled=atLimit;prevBtn.style.opacity=atLimit?'0.35':'';prevBtn.style.cursor=atLimit?'not-allowed':'';};
   const pwl=document.getElementById('print-week-label');
   if(pwl)pwl.textContent=`Weekly Time Table of LRES　${dates[0].getFullYear()}年 ${jp(dates[0])} 〜 ${jp(dates[dates.length-1])}週`;
   // 確定状態を反映
@@ -763,7 +771,20 @@ function setAtt(v){
   save();closeM('att-modal');render();
 }
 function closeM(id){document.getElementById(id).style.display='none';actx=null;}
-function navWeek(n){ws=addD(ws,n*7);render();}
+function getMinWeek(){
+  // 3ヶ月前の月曜日
+  const d=new Date();d.setMonth(d.getMonth()-3);return monday(d);
+}
+function navWeek(n){
+  if(n===-1){
+    const next=addD(ws,-7);
+    if(next<getMinWeek())return; // 3ヶ月前より前には行けない
+    ws=next;
+  } else {
+    ws=addD(ws,n*7);
+  }
+  render();
+}
 
 // 指定日にその生徒がクラスのメンバーとして有効かチェック
 function isMemberOn(cls, studentName, dateStr){
@@ -793,6 +814,15 @@ function toggleConfirmWeek(){
       if(!ok)return;
       if(!D.confirmedWeeks)D.confirmedWeeks=[];
       D.confirmedWeeks.push(getWsKey());
+      // この週のクラス構成をスナップショットとして保存
+      if(!D.snapshots)D.snapshots={};
+      D.snapshots[getWsKey()]=D.classes.map(c=>({
+        id:c.id,dow:c.dow,start:c.start,end:c.end,level:c.level,
+        color:c.color,subCid:c.subCid,kids:c.kids,isPrivate:c.isPrivate,
+        textbook:c.textbook,
+        students:[...c.students],
+        sd:JSON.parse(JSON.stringify(c.sd||{}))
+      }));
       save();render();
     });
   }
@@ -1467,6 +1497,13 @@ function save(){
   updateUndoUI();
 }
 
+function pruneOldSnapshots(){
+  if(!D.snapshots)return;
+  const minKey=fmt(getMinWeek());
+  let pruned=false;
+  Object.keys(D.snapshots).forEach(k=>{if(k<minKey){delete D.snapshots[k];pruned=true;}});
+  if(pruned)save();
+}
 function applyLoadedData(pd,pmk){
   D=pd;MK=pmk;
   // Firebaseは空配列をnullで返すので、各配列フィールドをガード
@@ -1550,7 +1587,7 @@ function printSchedule(){
   },300);
 }
 
-load();recheckAllMakeups();
+load();pruneOldSnapshots();recheckAllMakeups();
 // localStorageに既存データがあった場合のみ上書き保存（キャッシュクリア後の空データ上書きを防止）
 if(localStorage.getItem(KEY)){localStorage.setItem(KEY,JSON.stringify({D,MK}));}
 _lastSnapshot=JSON.stringify({D,MK});
@@ -1580,6 +1617,7 @@ if(window.innerWidth<=600){
     const dy=e.changedTouches[0].clientY-ty;
     if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){
       const dir=dx<0?1:-1;
+      if(dir===-1&&addD(ws,-7)<getMinWeek())return; // 3ヶ月前より前はスワイプ無効
       // バイブレーション
       if(navigator.vibrate)navigator.vibrate(40);
       // スライドアニメーション
