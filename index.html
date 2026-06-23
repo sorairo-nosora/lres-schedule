@@ -101,6 +101,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   /* 確定バナー */
   #confirmed-banner{font-size:11px;padding:5px 10px}
 
+  /* PC専用ボタン: スマホでは非表示 */
+  #confirm-btn,#print-btn,#export-btn{display:none!important}
+
   /* チップ: スマホは6名分入るよう小さく */
   .chip{font-size:8px;padding:0 2px;line-height:1.05;margin:0 1px 1px 0;border-radius:6px}
   .chip-mk{font-size:8px;padding:0 2px;line-height:1.05;margin:0 1px 1px 0;border-radius:6px}
@@ -157,8 +160,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <button class="btn" id="confirm-btn" onclick="toggleConfirmWeek()">✓ この週を確定</button>
       <button class="btn btn-fb" id="fb-sync-btn" onclick="fbPullData()" style="display:none">🔄 更新</button>
       <span id="fb-status" class="disconnected" onclick="showFbSetup()" title="Firebase設定">⚪ 未接続</span>
-      <button class="btn" onclick="printSchedule()">🖨 印刷</button>
-      <button class="btn" onclick="exportData()" style="font-size:11px">📤 データ出力</button>
+      <button class="btn" id="print-btn" onclick="printSchedule()">🖨 印刷</button>
+      <button class="btn" id="export-btn" onclick="exportData()" style="font-size:11px">📤 データ出力</button>
     </div>
   </div>
   <div class="tabs">
