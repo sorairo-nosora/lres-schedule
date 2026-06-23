@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v41: ①確定済みの週を編集完全不可に（出席・管理・休校タブ全操作ブロック＋オーバーレイ表示）②プライベートクラスの生徒選択を週ごとにリセット（D.priSelで管理） -->
+<!-- v42: 保存ボタン＋アンドゥ機能追加。自動Firebase保存を廃止し、💾保存ボタン押下時のみクラウドに保存。↩元に戻すで前回保存まで何回でも取り消し可能。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -152,6 +152,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <button class="btn" onclick="navWeek(1)">次週 ›</button>
     </div>
     <div class="header-actions">
+      <button class="btn" id="save-btn" onclick="saveToCloud()" disabled>💾 保存</button>
+      <button class="btn" id="undo-btn" onclick="undo()" disabled>↩ 元に戻す</button>
       <button class="btn" id="confirm-btn" onclick="toggleConfirmWeek()">✓ この週を確定</button>
       <button class="btn btn-fb" id="fb-sync-btn" onclick="fbPullData()" style="display:none">🔄 更新</button>
       <span id="fb-status" class="disconnected" onclick="showFbSetup()" title="Firebase設定">⚪ 未接続</span>
@@ -348,6 +350,43 @@ let MK=[];
 let ws=currentWeekStart();
 let actx=null;
 let openCards=new Set();
+
+// ===== アンドゥ・保存管理 =====
+let undoStack=[];
+let _lastSnapshot=null;
+let hasUnsavedChanges=false;
+
+function updateUndoUI(){
+  const sb=document.getElementById('save-btn');
+  const ub=document.getElementById('undo-btn');
+  if(sb){
+    sb.disabled=!hasUnsavedChanges;
+    sb.style.background=hasUnsavedChanges?'#fcebeb':'';
+    sb.style.borderColor=hasUnsavedChanges?'#f09595':'';
+    sb.style.color=hasUnsavedChanges?'#791f1f':'';
+  }
+  if(ub)ub.disabled=undoStack.length===0;
+}
+
+function saveToCloud(){
+  if(!hasUnsavedChanges)return;
+  fbPush();
+  undoStack=[];
+  hasUnsavedChanges=false;
+  updateUndoUI();
+}
+
+function undo(){
+  if(undoStack.length===0)return;
+  const prev=JSON.parse(undoStack.pop());
+  applyLoadedData(prev.D,Array.isArray(prev.MK)?prev.MK:[]);
+  _lastSnapshot=JSON.stringify({D,MK});
+  localStorage.setItem(KEY,JSON.stringify({D,MK}));
+  hasUnsavedChanges=undoStack.length>0;
+  closeM('att-modal');
+  render();renderAdmin();renderHolTab();
+  updateUndoUI();
+}
 
 function monday(d){const r=new Date(d);const day=r.getDay();r.setDate(r.getDate()+(day===0?-6:1-day));r.setHours(0,0,0,0);return r;}
 function currentWeekStart(){
@@ -1354,6 +1393,7 @@ async function fbPullData(){
         localStorage.setItem(KEY,JSON.stringify({D,MK}));
       }catch(lsErr){console.warn('localStorage error:',lsErr);}
       recheckAllMakeups();render();
+      undoStack=[];_lastSnapshot=JSON.stringify({D,MK});hasUnsavedChanges=false;updateUndoUI();
       updateFbStatus('connected','🟢 更新済 '+(new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})));
     }else{updateFbStatus('connected','🟢 データなし');}
   }catch(err){
@@ -1386,7 +1426,15 @@ function fbPush(){
 }
 
 // ===== 保存・読込 =====
-function save(){localStorage.setItem(KEY,JSON.stringify({D,MK}));fbPush();}
+function save(){
+  if(_lastSnapshot!==null){
+    undoStack.push(_lastSnapshot);
+    hasUnsavedChanges=true;
+  }
+  _lastSnapshot=JSON.stringify({D,MK});
+  localStorage.setItem(KEY,JSON.stringify({D,MK}));
+  updateUndoUI();
+}
 
 function applyLoadedData(pd,pmk){
   D=pd;MK=pmk;
@@ -1434,7 +1482,7 @@ function load(){
     const raw=localStorage.getItem(KEY);
     if(raw){const p=JSON.parse(raw);if(p.D&&Array.isArray(p.MK)){applyLoadedData(p.D,p.MK);return;}}
   }catch(e){}
-  D=initD();MK=[];save();
+  D=initD();MK=[];
 }
 
 function initD(){
@@ -1471,7 +1519,10 @@ function printSchedule(){
   },300);
 }
 
-load();recheckAllMakeups();save();render();
+load();recheckAllMakeups();
+localStorage.setItem(KEY,JSON.stringify({D,MK}));
+_lastSnapshot=JSON.stringify({D,MK});
+render();
 window.addEventListener('resize',()=>render());
 // Firebase初期化（Auth SDK除去済みのためDOMContentLoaded待ち不要）
 initFirebase();
