@@ -306,6 +306,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   </div>
 </div>
 
+<!-- 週別クラス詳細モーダル -->
+<div class="overlay" id="cls-week-modal" style="display:none" onclick="if(event.target===this)closeM('cls-week-modal')">
+  <div class="modal" style="max-width:360px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
+      <h3 id="cwm-title"></h3>
+      <button onclick="openClsAdminDirect()" style="font-size:11px;padding:3px 9px;border:1px solid #ccc;border-radius:6px;background:#f5f5f0;cursor:pointer;color:#444;flex-shrink:0;margin-left:8px">⚙ クラス設定</button>
+    </div>
+    <div class="msub" id="cwm-date"></div>
+    <div id="cwm-students" style="margin-top:8px"></div>
+    <div id="cwm-mk"></div>
+    <div class="mcancel" onclick="closeM('cls-week-modal')">閉じる</div>
+  </div>
+</div>
+
 <!-- Firebase設定モーダル -->
 <div id="fb-setup-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:600;align-items:center;justify-content:center;padding:16px;overflow-y:auto" onclick="if(event.target===this)closeFbSetup()">
   <div style="background:#fff;border-radius:12px;padding:20px;width:100%;max-width:400px;margin:auto">
@@ -730,7 +744,7 @@ function render(){
       const blkBg=isOutline?'#fff':cls.color;
       const blkStyle=isOutline?'box-shadow:inset 0 0 0 1.5px #e07b20;':(isSpecDay?'box-shadow:inset 0 0 0 2.5px #e24b4a;':'');
       const skipBtn=(!isConfirmed()&&!hol&&!tempHol)?`<button class="skip-btn" onclick="event.stopPropagation();skipWeek('${ec}')" title="この週だけ非表示">skip</button>`:'';
-      g+=`<div class="cls-blk" data-cid="${ec}" style="top:${top}px;height:${h}px;${leftStyle};${rightStyle};background:${blkBg};${blkStyle}${(hol||tempHol)?'opacity:.35;pointer-events:none':''}" onclick="openClsAdmin('${ec}',event)">${skipBtn}<div style="padding:${blkPad};height:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between">
+      g+=`<div class="cls-blk" data-cid="${ec}" style="top:${top}px;height:${h}px;${leftStyle};${rightStyle};background:${blkBg};${blkStyle}${(hol||tempHol)?'opacity:.35;pointer-events:none':''}" onclick="openClsWeek('${ec}','${ds}',event)">${skipBtn}<div style="padding:${blkPad};height:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between">
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:1px">
               <div style="display:flex;align-items:center;gap:3px;flex:1;min-width:0">
@@ -835,6 +849,7 @@ function setAtt(v){
   if(v==='absent')registerMK(cid,ds,n);
   else removeMK(cid,ds,n);
   save();closeM('att-modal');render();
+  if(document.getElementById('cls-week-modal').style.display!=='none')renderClsWeekModal();
 }
 function closeM(id){document.getElementById(id).style.display='none';actx=null;}
 function getMinWeek(){
@@ -904,6 +919,72 @@ function unconfirmWeek(){
 
 function openClsAdmin(cid,e){
   if(e&&e.target&&(e.target.classList.contains('chip')||e.target.classList.contains('chip-mk')))return;
+  openCards.add(cid);
+  gotoTab('admin',document.getElementById('tbtn-admin'));
+  setTimeout(()=>{const el=document.getElementById('cb-'+cid);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},100);
+}
+
+// ===== 週別クラス詳細モーダル =====
+let _cwmCid=null,_cwmDs=null;
+function openClsWeek(cid,ds,e){
+  if(e&&e.target&&(e.target.classList.contains('chip')||e.target.classList.contains('chip-mk')))return;
+  _cwmCid=cid;_cwmDs=ds;
+  renderClsWeekModal();
+  document.getElementById('cls-week-modal').style.display='flex';
+}
+function renderClsWeekModal(){
+  const cls=D.classes.find(c=>c.id===_cwmCid);
+  if(!cls)return;
+  const ds=_cwmDs;
+  const d=new Date(ds);
+  const dow=d.getDay()===0?7:d.getDay();
+  document.getElementById('cwm-title').textContent=`${cls.level||''} ${cls.start}–${cls.end}`;
+  document.getElementById('cwm-date').textContent=`${DJ[dow]}曜 ${ds}`;
+
+  // 通常生徒
+  const students=cls.isPrivate?(getPriStudent(cls.id)?[getPriStudent(cls.id)]:[]):cls.students.filter(s=>isMemberOn(cls,s,ds)&&!isOnLeave(cls,s,ds));
+  const ATT_LABELS={'present':'出席','absent':'欠席（振替あり）','absent-no-sub':'欠席（振替なし）','late':'遅刻'};
+  const ATT_STYLE={'present':'background:#eaf3de;color:#27500a','absent':'background:#fcebeb;color:#791f1f','absent-no-sub':'background:#f1efe8;color:#444','late':'background:#faeeda;color:#633806'};
+  let html='';
+  if(students.length===0){html='<p style="font-size:12px;color:#888">生徒なし</p>';}
+  students.forEach(s=>{
+    const voidMK=MK.find(m=>m.fromCid===cls.id&&m.fromDate===ds&&m.student===s&&m.status==='void');
+    const att=getA(cls.id,ds,s);
+    const key=voidMK?'absent':att;
+    const label=voidMK?'欠席（振替不可）':ATT_LABELS[att]||'出席';
+    const style=ATT_STYLE[key]||ATT_STYLE['present'];
+    const es=s.replace(/'/g,"\\'");
+    const ec=cls.id.replace(/'/g,"\\'");
+    const disabled=isConfirmed()||voidMK?'opacity:.6;pointer-events:none':'cursor:pointer';
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede5;${disabled}" onclick="openAttFromWeek('${ec}','${ds}','${es}')">
+      <span style="font-size:13px;font-weight:500">${s}</span>
+      <span style="font-size:11px;${style};padding:2px 9px;border-radius:8px">${label}</span>
+    </div>`;
+  });
+  document.getElementById('cwm-students').innerHTML=html;
+
+  // 振替参加者
+  const mks=getMKfor(cls.id,ds).filter(m=>m.status!=='void');
+  let mkHtml='';
+  if(mks.length>0){
+    mkHtml='<div style="font-size:11px;color:#888;margin-top:10px;margin-bottom:4px;font-weight:600">振替参加</div>';
+    mks.forEach(m=>{
+      const fc=D.classes.find(c=>c.id===m.fromCid);
+      mkHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0ede5">
+        <span style="font-size:13px;color:#666">${m.student}</span>
+        <span style="font-size:10px;background:#f1f0eb;color:#888;padding:2px 7px;border-radius:6px">${fc?DJ[fc.dow]+'曜 '+fc.start:'別クラス'}から</span>
+      </div>`;
+    });
+  }
+  document.getElementById('cwm-mk').innerHTML=mkHtml;
+}
+function openAttFromWeek(cid,ds,n){
+  if(isConfirmed())return;
+  _openAttInner(cid,ds,n);
+}
+function openClsAdminDirect(){
+  const cid=_cwmCid;
+  closeM('cls-week-modal');
   openCards.add(cid);
   gotoTab('admin',document.getElementById('tbtn-admin'));
   setTimeout(()=>{const el=document.getElementById('cb-'+cid);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},100);
