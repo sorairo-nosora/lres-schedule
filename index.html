@@ -766,8 +766,8 @@ function render(){
       const sh=(pt(sp.end)-pt(sp.start))*PPM;
       const sec=sp.id.replace(/'/g,"\'");
       g+=`<div class="spot-blk" style="top:${stop}px;height:${sh}px;left:2px;right:2px;background:#fff;border:1.5px solid #e07b20;padding:3px 5px" onclick="rmSpotConfirm('${sec}')">
-        <div style="font-size:8px;color:#b06010;opacity:.8;margin-bottom:1px">${sp.start}–${sp.end} <span style="background:rgba(224,123,32,.15);border-radius:3px;padding:0 3px">SPOT</span></div>
-        <div style="font-size:10px;font-weight:600;color:#7a3a00">${sp.students||''}</div>
+        <div style="font-size:8px;color:#b06010;opacity:.8;margin-bottom:2px">${sp.start}–${sp.end} <span style="background:rgba(224,123,32,.15);border-radius:3px;padding:0 3px">SPOT</span></div>
+        <div style="display:flex;flex-wrap:wrap">${(sp.students||'').split(/[、,，\s]+/).filter(Boolean).map(n=>`<span class="chip" style="background:#fff7f0;color:#7a3a00;border-color:#e07b20;font-size:${isMob?'8':'12'}px;padding:0 ${isMob?'2':'5'}px;line-height:1.05;margin:0 1px 1px 0;border-radius:${isMob?'4':'12'}px">${n}</span>`).join('')}</div>
       </div>`;
     });
 
