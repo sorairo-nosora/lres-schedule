@@ -729,7 +729,7 @@ function render(){
         } else if(att==='late'){extra=' late';bord='#fac775';}
         if(!onLeave&&nf&&att!=='absent'&&att!=='absent-no-sub'&&!voidMK)tc='#a32d2d';
         const es=s.replace(/'/g,"\'"),ec=cls.id.replace(/'/g,"\'");
-        chips+=`<span class="chip${extra}" style="background:${bg};color:${tc};border-color:${bord};font-size:${chipFontSize}px;padding:0 ${chipPad}px;line-height:1.05;margin:0 1px 1px 0;border-radius:${isMob||multiCol?'4':'12'}px" onclick="event.stopPropagation();openAtt('${ec}','${ds}','${es}')">${displayName}</span>`;
+        chips+=`<span class="chip${extra}" style="background:${bg};color:${tc};border-color:${bord};font-size:${chipFontSize}px;padding:0 ${chipPad}px;line-height:1.05;margin:0 1px 1px 0;border-radius:${isMob||multiCol?'4':'12'}px">${displayName}</span>`;
       });
       mks.forEach(m=>{
         if(m.status==='void'){
@@ -941,24 +941,42 @@ function renderClsWeekModal(){
   document.getElementById('cwm-title').textContent=`${cls.level||''} ${cls.start}–${cls.end}`;
   document.getElementById('cwm-date').textContent=`${DJ[dow]}曜 ${ds}`;
 
-  // 通常生徒
+  const confirmed=isConfirmed();
   const students=cls.isPrivate?(getPriStudent(cls.id)?[getPriStudent(cls.id)]:[]):cls.students.filter(s=>isMemberOn(cls,s,ds)&&!isOnLeave(cls,s,ds));
-  const ATT_LABELS={'present':'出席','absent':'欠席（振替あり）','absent-no-sub':'欠席（振替なし）','late':'遅刻'};
-  const ATT_STYLE={'present':'background:#eaf3de;color:#27500a','absent':'background:#fcebeb;color:#791f1f','absent-no-sub':'background:#f1efe8;color:#444','late':'background:#faeeda;color:#633806'};
+  const STATUSES=[
+    {v:'present', label:'出席',   bg:'#eaf3de', col:'#27500a'},
+    {v:'absent',  label:'欠席↺', bg:'#fcebeb', col:'#791f1f'},
+    {v:'absent-no-sub', label:'欠席✗', bg:'#f1efe8', col:'#444'},
+    {v:'late',    label:'遅刻',   bg:'#faeeda', col:'#633806'},
+  ];
   let html='';
-  if(students.length===0){html='<p style="font-size:12px;color:#888">生徒なし</p>';}
+  if(students.length===0)html='<p style="font-size:12px;color:#888;padding:8px 0">生徒なし</p>';
   students.forEach(s=>{
     const voidMK=MK.find(m=>m.fromCid===cls.id&&m.fromDate===ds&&m.student===s&&m.status==='void');
     const att=getA(cls.id,ds,s);
-    const key=voidMK?'absent':att;
-    const label=voidMK?'欠席（振替不可）':ATT_LABELS[att]||'出席';
-    const style=ATT_STYLE[key]||ATT_STYLE['present'];
-    const es=s.replace(/'/g,"\\'");
-    const ec=cls.id.replace(/'/g,"\\'");
-    const disabled=isConfirmed()||voidMK?'opacity:.6;pointer-events:none':'cursor:pointer';
-    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede5;${disabled}" onclick="openAttFromWeek('${ec}','${ds}','${es}')">
-      <span style="font-size:13px;font-weight:500">${s}</span>
-      <span style="font-size:11px;${style};padding:2px 9px;border-radius:8px">${label}</span>
+    const note=(cls.sd&&cls.sd[s]&&cls.sd[s].note)||'';
+    const es=s.replace(/'/g,"\\'"),ec=cls.id.replace(/'/g,"\\'");
+    const nv=note.replace(/"/g,'&quot;');
+    let btns='';
+    if(confirmed||voidMK){
+      const st=voidMK?STATUSES[1]:STATUSES.find(x=>x.v===att)||STATUSES[0];
+      const lbl=voidMK?'欠席（振替不可）':st.label;
+      btns=`<span style="font-size:11px;background:${st.bg};color:${st.col};padding:2px 9px;border-radius:8px;opacity:.7">${lbl}</span>`;
+    } else {
+      btns=STATUSES.map(st=>{
+        const sel=(att===st.v)||(att==='present'&&st.v==='present');
+        const bs=sel?`background:${st.bg};color:${st.col};border-color:${st.col};font-weight:600`:'background:#fff;color:#aaa;border-color:#e0ddd5';
+        return`<button onclick="setAttWeek('${ec}','${ds}','${es}','${st.v}')" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid;cursor:pointer;${bs}">${st.label}</button>`;
+      }).join('');
+    }
+    const noteBtn=confirmed?'':`<button onclick="toggleCwmNote(this)" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid ${note?'#f0c040':'#e0ddd5'};background:${note?'#fff8e6':'#fff'};color:${note?'#7a5a00':'#aaa'};cursor:pointer;flex-shrink:0" title="備考">📝</button>`;
+    const noteRow=confirmed?'':`<div class="cwm-note-row" style="display:none;margin-top:5px"><input type="text" value="${nv}" placeholder="備考を入力（時間割で名前が赤表示されます）" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:12px" onchange="setCwmNote('${ec}','${es}',this.value)"></div>`;
+    html+=`<div style="padding:9px 0;border-bottom:1px solid #f0ede5">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:600;min-width:56px">${s}</span>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">${btns}</div>
+        ${noteBtn}
+      </div>${noteRow}
     </div>`;
   });
   document.getElementById('cwm-students').innerHTML=html;
@@ -967,7 +985,7 @@ function renderClsWeekModal(){
   const mks=getMKfor(cls.id,ds).filter(m=>m.status!=='void');
   let mkHtml='';
   if(mks.length>0){
-    mkHtml='<div style="font-size:11px;color:#888;margin-top:10px;margin-bottom:4px;font-weight:600">振替参加</div>';
+    mkHtml='<div style="font-size:11px;color:#888;margin-top:12px;margin-bottom:4px;font-weight:600">振替参加</div>';
     mks.forEach(m=>{
       const fc=D.classes.find(c=>c.id===m.fromCid);
       mkHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0ede5">
@@ -978,9 +996,25 @@ function renderClsWeekModal(){
   }
   document.getElementById('cwm-mk').innerHTML=mkHtml;
 }
-function openAttFromWeek(cid,ds,n){
+function setAttWeek(cid,ds,n,v){
   if(isConfirmed())return;
-  _openAttInner(cid,ds,n);
+  setA(cid,ds,n,v);
+  if(v==='absent')registerMK(cid,ds,n);
+  else removeMK(cid,ds,n);
+  save();render();renderClsWeekModal();
+}
+function toggleCwmNote(btn){
+  const row=btn.closest('div').nextElementSibling;
+  if(!row)return;
+  const open=row.style.display==='none';
+  row.style.display=open?'block':'none';
+  if(open)row.querySelector('input').focus();
+}
+function setCwmNote(cid,n,note){
+  const cls=D.classes.find(c=>c.id===cid);if(!cls)return;
+  if(!cls.sd)cls.sd={};if(!cls.sd[n])cls.sd[n]={};
+  cls.sd[n].note=note;
+  save();render();renderClsWeekModal();
 }
 function openClsAdminDirect(){
   const cid=_cwmCid;
