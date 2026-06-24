@@ -1515,26 +1515,24 @@ function rmSt(cid,n){
 function renameSt(cid,oldName){
   const newName=(prompt(`「${oldName}」の新しい名前を入力してください:`,oldName)||'').trim();
   if(!newName||newName===oldName)return;
-  // 全クラスで同名の生徒を一括リネーム
-  D.classes.forEach(cls=>{
-    const idx=cls.students.indexOf(oldName);
-    if(idx===-1)return;
-    cls.students[idx]=newName;
-    if(cls.sd&&cls.sd[oldName]){cls.sd[newName]=cls.sd[oldName];delete cls.sd[oldName];}
-  });
-  // 出席記録のキーを更新
+  // このクラスのみリネーム
+  const cls=D.classes.find(c=>c.id===cid);
+  if(!cls)return;
+  const idx=cls.students.indexOf(oldName);
+  if(idx!==-1)cls.students[idx]=newName;
+  if(cls.sd&&cls.sd[oldName]){cls.sd[newName]=cls.sd[oldName];delete cls.sd[oldName];}
+  // 出席記録: このクラスIDのもののみ更新
   const attUpdates={};
   Object.keys(D.att).forEach(k=>{
     const parts=k.split('|');// cid|date|name
-    if(parts[2]===oldName){attUpdates[parts[0]+'|'+parts[1]+'|'+newName]=D.att[k];delete D.att[k];}
+    if(parts[0]===cid&&parts[2]===oldName){attUpdates[cid+'|'+parts[1]+'|'+newName]=D.att[k];delete D.att[k];}
   });
   Object.assign(D.att,attUpdates);
-  // 振替記録を更新
-  MK=MK.map(m=>({...m,student:m.student===oldName?newName:m.student}));
-  // プライベート生徒リストも更新
-  if(D.privateStudents)D.privateStudents=D.privateStudents.map(s=>{
-    if(typeof s==='string')return s===oldName?newName:s;
-    return s.name===oldName?{...s,name:newName}:s;
+  // 振替記録: このクラスに関係するもののみ更新
+  MK=MK.map(m=>{
+    if(m.student!==oldName)return m;
+    if(m.fromCid===cid||m.toCid===cid)return{...m,student:newName};
+    return m;
   });
   save();renderAdmin();render();
 }
