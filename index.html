@@ -913,7 +913,7 @@ function toggleConfirmWeek(){
   if(isConfirmed()){
     unconfirmWeek();
   } else {
-    customConfirm('この週を確定しますか？\n確定後も変更は可能ですが、確認ダイアログが表示されます。', ok=>{
+    customConfirm('この週を確定しますか？\n確定後は編集できなくなります。解除する場合は確定ボタンをもう一度タップしてください。', ok=>{
       if(!ok)return;
       if(!D.confirmedWeeks)D.confirmedWeeks=[];
       D.confirmedWeeks.push(getWsKey());
