@@ -60,7 +60,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .cls-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:2}
 .cls-blk .skip-btn{display:none;position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.18);color:#fff;border:none;border-radius:4px;font-size:9px;padding:1px 4px;cursor:pointer;z-index:10;line-height:1.4}
 .cls-blk:hover .skip-btn{display:block}
-.spot-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;border:1.5px dashed rgba(200,140,0,0.55);z-index:6}
+.spot-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:6}
 .tag{padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block}
 /* ===== Firebase連携UI ===== */
 #fb-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid transparent;transition:all .3s;white-space:nowrap;cursor:pointer}
@@ -247,7 +247,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <div class="fr"><label>開始</label><input type="time" id="spot-start" step="300"></div>
       <div class="fr"><label>終了</label><input type="time" id="spot-end" step="300"></div>
       <div class="fr"><label>生徒名</label><input type="text" id="spot-students" placeholder="例: 田中、鈴木"></div>
-      <div class="fr"><label>色</label><input type="color" id="spot-color" value="#ffffff" style="width:60px;height:30px;border:none;cursor:pointer"></div>
     </div>
     <button class="btn btn-p" onclick="addSpot()" style="width:100%;margin-bottom:8px">追加</button>
     <div class="mcancel" onclick="closeM('spot-modal')">キャンセル</div>
@@ -765,9 +764,9 @@ function render(){
       const stop=(pt(sp.start)-GS)*PPM;
       const sh=(pt(sp.end)-pt(sp.start))*PPM;
       const sec=sp.id.replace(/'/g,"\'");
-      g+=`<div class="spot-blk" style="top:${stop}px;height:${sh}px;left:2px;right:2px;background:${sp.color};padding:3px 5px" onclick="rmSpotConfirm('${sec}')">
-        <div style="font-size:8px;opacity:.6;margin-bottom:1px">${sp.start}–${sp.end} <span style="background:rgba(0,0,0,.12);border-radius:3px;padding:0 3px">SPOT</span></div>
-        <div style="font-size:10px;font-weight:600;color:#1a3a6a">${sp.students||''}</div>
+      g+=`<div class="spot-blk" style="top:${stop}px;height:${sh}px;left:2px;right:2px;background:#fff;box-shadow:inset 0 0 0 1.5px #e07b20;padding:3px 5px" onclick="rmSpotConfirm('${sec}')">
+        <div style="font-size:8px;color:#b06010;opacity:.8;margin-bottom:1px">${sp.start}–${sp.end} <span style="background:rgba(224,123,32,.15);border-radius:3px;padding:0 3px">SPOT</span></div>
+        <div style="font-size:10px;font-weight:600;color:#7a3a00">${sp.students||''}</div>
       </div>`;
     });
 
@@ -1094,10 +1093,9 @@ function addSpot(){
   const start=document.getElementById('spot-start').value;
   const end=document.getElementById('spot-end').value;
   const students=document.getElementById('spot-students').value.trim();
-  const color=document.getElementById('spot-color').value;
   if(!start||!end||!students)return;
   if(!D.spots)D.spots=[];
-  D.spots.push({id:'sp-'+Date.now(),date:_spotDate,start,end,students,color});
+  D.spots.push({id:'sp-'+Date.now(),date:_spotDate,start,end,students});
   save();closeM('spot-modal');render();
 }
 function rmSpotConfirm(id){
