@@ -57,10 +57,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .hbtn{padding:5px 10px;border:1px solid #ccc;border-radius:8px;font-size:12px;cursor:pointer;margin:2px;background:#fff}
 .hbtn.on{background:#fcebeb;border-color:#e24b4a;color:#791f1f;font-weight:600}
 .iv-block{position:absolute;left:2px;right:2px;border-radius:6px;background:#f3eeff;border:1px solid #c9a8f0;padding:3px 6px;font-size:9px;color:#5b2d8e;overflow:hidden;z-index:5}
-.cls-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:2}
+.cls-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:2;touch-action:manipulation}
 .cls-blk .skip-btn{display:none;position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.18);color:#fff;border:none;border-radius:4px;font-size:9px;padding:1px 4px;cursor:pointer;z-index:10;line-height:1.4}
 .cls-blk:hover .skip-btn{display:block}
-.spot-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:6}
+.spot-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:6;touch-action:manipulation}
 .tag{padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block}
 /* ===== Firebase連携UI ===== */
 #fb-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid transparent;transition:all .3s;white-space:nowrap;cursor:pointer}
@@ -152,7 +152,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 <body>
 <div class="app" id="main-app">
   <div class="header">
-    <h1><span style="color:#666;font-weight:500">Weekly Time Table of </span><span style="color:#c0392b;font-weight:800">L</span><span style="color:#e07b20;font-weight:800">R</span><span style="color:#6ab04c;font-weight:800">E</span><span style="color:#4aabcc;font-weight:800">S</span></h1>
+    <h1 onclick="ws=currentWeekStart();render()" style="cursor:pointer" title="今週に戻る"><span style="color:#666;font-weight:500">Weekly Time Table of </span><span style="color:#c0392b;font-weight:800">L</span><span style="color:#e07b20;font-weight:800">R</span><span style="color:#6ab04c;font-weight:800">E</span><span style="color:#4aabcc;font-weight:800">S</span></h1>
     <div class="header-nav">
       <button class="btn" onclick="navWeek(-1)">‹ 前週</button>
       <span class="wlabel" id="wlabel">5/26 〜 5/30</span>
@@ -380,7 +380,7 @@ const DEFAULT_PRI=[
   // プライベートレッスンの生徒候補（管理タブから追加・編集できます）
 ];
 
-let D={classes:[],att:{},hols:[],specials:[],interviews:[],privateStudents:[...DEFAULT_PRI]};
+let D={classes:[],att:{},flags:{},hols:[],specials:[],interviews:[],privateStudents:[...DEFAULT_PRI]};
 let MK=[];
 let ws=currentWeekStart();
 let actx=null;
@@ -449,6 +449,8 @@ let _viewClasses=null; // 表示中の週のクラス構成（スナップショ
 function dayClasses(dow,ds){return (_viewClasses||D.classes).filter(c=>{if(c.dow!==dow)return false;if(ds&&c.joinDate&&ds<c.joinDate)return false;if(ds&&c.leaveDate&&ds>=c.leaveDate)return false;return true;}).sort((a,b)=>pt(a.start)-pt(b.start));}
 function getA(cid,ds,n){return D.att[cid+'|'+ds+'|'+n]||'present';}
 function setA(cid,ds,n,v){D.att[cid+'|'+ds+'|'+n]=v;}
+function getFlags(cid,ds,n){return D.flags[cid+'|'+ds+'|'+n]||{};}
+function setFlag(cid,ds,n,k,v){if(!D.flags[cid+'|'+ds+'|'+n])D.flags[cid+'|'+ds+'|'+n]={};D.flags[cid+'|'+ds+'|'+n][k]=v;save();render();renderClsWeekModal();}
 function hasNote(cls,n){return !!(cls.sd&&cls.sd[n]&&cls.sd[n].note);}
 function getNendo(){const now=new Date();return now.getMonth()>=3?now.getFullYear():now.getFullYear()-1;}
 function calcGrade(bn,bg){if(!bg||bn==null)return null;const i=GRADES.indexOf(bg);if(i<0)return null;return GRADES[Math.min(i+getNendo()-bn,GRADES.length-1)];}
@@ -727,7 +729,8 @@ function render(){
         } else if(att==='absent'||att==='absent-no-sub'){
           bg='#fff';tc='#aaa8a0';extra=' absent';bord='#d4d2cc';
         } else if(att==='late'){extra=' late';bord='#fac775';}
-        if(!onLeave&&nf&&att!=='absent'&&att!=='absent-no-sub'&&!voidMK)tc='#a32d2d';
+        const fl=getFlags(cls.id,ds,s);
+        if(!onLeave&&(nf||fl.give||fl.recv)&&att!=='absent'&&att!=='absent-no-sub'&&!voidMK)tc='#a32d2d';
         const es=s.replace(/'/g,"\'"),ec=cls.id.replace(/'/g,"\'");
         chips+=`<span class="chip${extra}" style="background:${bg};color:${tc};border-color:${bord};font-size:${chipFontSize}px;padding:0 ${chipPad}px;line-height:1.05;margin:0 1px 1px 0;border-radius:${isMob||multiCol?'4':'12'}px">${displayName}</span>`;
       });
@@ -969,13 +972,16 @@ function renderClsWeekModal(){
         return`<button onclick="setAttWeek('${ec}','${ds}','${es}','${st.v}')" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid;cursor:pointer;${bs}">${st.label}</button>`;
       }).join('');
     }
+    const fl=getFlags(cls.id,ds,s);
+    const giveBtn=confirmed?'':`<button onclick="setFlag('${ec}','${ds}','${es}','give',${!fl.give})" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid ${fl.give?'#c0392b':'#e0ddd5'};background:${fl.give?'#fcebeb':'#fff'};color:${fl.give?'#a32d2d':'#aaa'};cursor:pointer;flex-shrink:0" title="封筒">✉️</button>`;
+    const recvBtn=confirmed?'':`<button onclick="setFlag('${ec}','${ds}','${es}','recv',${!fl.recv})" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid ${fl.recv?'#27500a':'#e0ddd5'};background:${fl.recv?'#eaf3de':'#fff'};color:${fl.recv?'#27500a':'#aaa'};cursor:pointer;flex-shrink:0" title="お金">💰</button>`;
     const noteBtn=confirmed?'':`<button onclick="toggleCwmNote(this)" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid ${note?'#f0c040':'#e0ddd5'};background:${note?'#fff8e6':'#fff'};color:${note?'#7a5a00':'#aaa'};cursor:pointer;flex-shrink:0" title="備考">📝</button>`;
     const noteRow=confirmed?'':`<div class="cwm-note-row" style="display:none;margin-top:5px"><input type="text" value="${nv}" placeholder="備考を入力（時間割で名前が赤表示されます）" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:12px" onchange="setCwmNote('${ec}','${es}',this.value)"></div>`;
     html+=`<div style="padding:9px 0;border-bottom:1px solid #f0ede5">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
         <span style="font-size:13px;font-weight:600;min-width:56px">${s}</span>
         <div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">${btns}</div>
-        ${noteBtn}
+        ${giveBtn}${recvBtn}${noteBtn}
       </div>${noteRow}
     </div>`;
   });
@@ -1753,6 +1759,7 @@ function applyLoadedData(pd,pmk){
   if(!Array.isArray(D.classes))D.classes=[];
   if(!Array.isArray(D.specials))D.specials=[];
   if(!D.att||typeof D.att!=='object')D.att={};
+  if(!D.flags||typeof D.flags!=='object')D.flags={};
   if(!Array.isArray(D.interviews))D.interviews=[];
   if(!Array.isArray(D.tempHols))D.tempHols=[];
   if(!Array.isArray(D.confirmedWeeks))D.confirmedWeeks=[];
