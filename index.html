@@ -969,19 +969,19 @@ function renderClsWeekModal(){
       btns=STATUSES.map(st=>{
         const sel=(att===st.v)||(att==='present'&&st.v==='present');
         const bs=sel?`background:${st.bg};color:${st.col};border-color:${st.col};font-weight:600`:'background:#fff;color:#aaa;border-color:#e0ddd5';
-        return`<button onclick="setAttWeek('${ec}','${ds}','${es}','${st.v}')" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid;cursor:pointer;${bs}">${st.label}</button>`;
+        return`<button onclick="setAttWeek('${ec}','${ds}','${es}','${st.v}')" style="font-size:10px;padding:2px 5px;border-radius:6px;border:1px solid;cursor:pointer;white-space:nowrap;${bs}">${st.label}</button>`;
       }).join('');
     }
     const fl=getFlags(cls.id,ds,s);
-    const giveBtn=confirmed?'':`<button onclick="setFlag('${ec}','${ds}','${es}','give',${!fl.give})" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid ${fl.give?'#c0392b':'#e0ddd5'};background:${fl.give?'#fcebeb':'#fff'};color:${fl.give?'#a32d2d':'#aaa'};cursor:pointer;flex-shrink:0" title="封筒">✉️</button>`;
-    const recvBtn=confirmed?'':`<button onclick="setFlag('${ec}','${ds}','${es}','recv',${!fl.recv})" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid ${fl.recv?'#27500a':'#e0ddd5'};background:${fl.recv?'#eaf3de':'#fff'};color:${fl.recv?'#27500a':'#aaa'};cursor:pointer;flex-shrink:0" title="お金">💰</button>`;
-    const noteBtn=confirmed?'':`<button onclick="toggleCwmNote(this)" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid ${note?'#f0c040':'#e0ddd5'};background:${note?'#fff8e6':'#fff'};color:${note?'#7a5a00':'#aaa'};cursor:pointer;flex-shrink:0" title="備考">📝</button>`;
+    const giveBtn=confirmed?'':`<button onclick="setFlag('${ec}','${ds}','${es}','give',${!fl.give})" style="font-size:13px;padding:1px 4px;border-radius:6px;border:1px solid ${fl.give?'#c0392b':'#e0ddd5'};background:${fl.give?'#fcebeb':'#fff'};cursor:pointer;flex-shrink:0;line-height:1.4;opacity:${fl.give?'1':'0.35'}" title="封筒">✉️</button>`;
+    const recvBtn=confirmed?'':`<button onclick="setFlag('${ec}','${ds}','${es}','recv',${!fl.recv})" style="font-size:13px;padding:1px 4px;border-radius:6px;border:1px solid ${fl.recv?'#27500a':'#e0ddd5'};background:${fl.recv?'#eaf3de':'#fff'};cursor:pointer;flex-shrink:0;line-height:1.4;opacity:${fl.recv?'1':'0.35'}" title="お金">💰</button>`;
+    const noteBtn=confirmed?'':`<button onclick="toggleCwmNote(this)" style="font-size:13px;padding:1px 4px;border-radius:6px;border:1px solid ${note?'#f0c040':'#e0ddd5'};background:${note?'#fff8e6':'#fff'};cursor:pointer;flex-shrink:0;line-height:1.4;opacity:${note?'1':'0.35'}" title="備考">📝</button>`;
     const noteRow=confirmed?'':`<div class="cwm-note-row" style="display:none;margin-top:5px"><input type="text" value="${nv}" placeholder="備考を入力（時間割で名前が赤表示されます）" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:12px" onchange="setCwmNote('${ec}','${es}',this.value)"></div>`;
-    html+=`<div style="padding:9px 0;border-bottom:1px solid #f0ede5">
-      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-        <span style="font-size:13px;font-weight:600;min-width:56px">${s}</span>
-        <div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">${btns}</div>
-        ${giveBtn}${recvBtn}${noteBtn}
+    html+=`<div style="padding:7px 0;border-bottom:1px solid #f0ede5">
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:13px;font-weight:600;min-width:50px;flex-shrink:0">${s}</span>
+        <div style="display:flex;gap:2px;flex:1">${btns}</div>
+        <div style="display:flex;gap:2px;flex-shrink:0">${giveBtn}${recvBtn}${noteBtn}</div>
       </div>${noteRow}
     </div>`;
   });
