@@ -221,10 +221,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   </div>
   <div id="tab-admin" class="admin" style="display: none;">
     <div class="sec">
-      <h3>クラス一覧・編集</h3>
-      <p style="font-size:11px;color:#888;margin-bottom:10px">時間割上のクラスブロックをタップしても直接開けます</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h3 style="margin-bottom:0">クラス一覧・編集</h3>
+        <button class="btn btn-p" onclick="showAddCls()">＋ クラスを追加</button>
+      </div>
       <div id="cards"></div>
-      <button class="btn btn-p" onclick="showAddCls()" style="margin-top:8px">＋ クラスを追加</button>
     </div>
     <div class="sec">
       <h3>🔑 プライベート生徒候補リスト</h3>
@@ -1371,7 +1372,10 @@ function renderPriList(){
     return`<div style="border:1px solid #e0ddd5;border-radius:8px;padding:8px 10px;margin-bottom:6px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <span style="font-weight:600;font-size:12px">${name}</span>
-        <button onclick="delPriStudent(${i})" style="font-size:11px;border:1px solid #f09595;color:#a32d2d;background:transparent;border-radius:6px;padding:2px 7px;cursor:pointer">削除</button>
+        <div style="display:flex;gap:4px">
+          <button onclick="renamePriStudent(${i})" style="font-size:11px;border:1px solid #ccc;color:#444;background:transparent;border-radius:6px;padding:2px 7px;cursor:pointer">名前変更</button>
+          <button onclick="delPriStudent(${i})" style="font-size:11px;border:1px solid #f09595;color:#a32d2d;background:transparent;border-radius:6px;padding:2px 7px;cursor:pointer">削除</button>
+        </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:120px">
@@ -1403,6 +1407,15 @@ function addPriStudent(){
 function delPriStudent(i){
   if(!D.privateStudents)return;
   D.privateStudents.splice(i,1);save();renderPriList();
+}
+function renamePriStudent(i){
+  if(!D.privateStudents)return;
+  const s=D.privateStudents[i];
+  const oldName=typeof s==='object'?s.name:s;
+  const newName=(prompt(`「${oldName}」の新しい名前を入力してください:`,oldName)||'').trim();
+  if(!newName||newName===oldName)return;
+  D.privateStudents[i]=typeof s==='object'?{...s,name:newName}:{name:newName,level:'',textbook:''};
+  save();renderPriList();renderAdmin();
 }
 
 // プライベートクラスの週ごと生徒取得
