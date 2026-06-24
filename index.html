@@ -452,6 +452,21 @@ function getA(cid,ds,n){return D.att[cid+'|'+ds+'|'+n]||'present';}
 function setA(cid,ds,n,v){D.att[cid+'|'+ds+'|'+n]=v;}
 function getFlags(cid,ds,n){return D.flags[cid+'|'+ds+'|'+n]||{};}
 function setFlag(cid,ds,n,k,v){if(!D.flags[cid+'|'+ds+'|'+n])D.flags[cid+'|'+ds+'|'+n]={};D.flags[cid+'|'+ds+'|'+n][k]=v;save();render();renderClsWeekModal();}
+// クラス属性の履歴参照: ds時点での有効値を返す
+function getClsAttr(cls,ds,field){
+  if(!cls.attrLog||cls.attrLog.length===0)return cls[field];
+  let val=cls[field];
+  for(const e of cls.attrLog){if(e.from<=ds&&e[field]!==undefined)val=e[field];}
+  return val;
+}
+function _clsAttrSnap(cls){return{start:cls.start,end:cls.end,level:cls.level||'',color:cls.color,textbook:cls.textbook||''};}
+function _pushAttrLog(cls,from){
+  if(!cls.attrLog||cls.attrLog.length===0){cls.attrLog=[{from:'2000-01-01',..._clsAttrSnap(cls)}];return;}
+  const snap=_clsAttrSnap(cls);
+  const last=cls.attrLog[cls.attrLog.length-1];
+  if(['start','end','level','color','textbook'].every(f=>last[f]===snap[f]))return;
+  cls.attrLog.push({from,...snap});
+}
 function hasNote(cls,n){return !!(cls.sd&&cls.sd[n]&&cls.sd[n].note);}
 function getNendo(){const now=new Date();return now.getMonth()>=3?now.getFullYear():now.getFullYear()-1;}
 function calcGrade(bn,bg){if(!bg||bn==null)return null;const i=GRADES.indexOf(bg);if(i<0)return null;return GRADES[Math.min(i+getNendo()-bn,GRADES.length-1)];}
@@ -676,7 +691,7 @@ function render(){
     const colAssign=[];
     const colEnd=[];
     dayCls.forEach(cls=>{
-      const s=pt(cls.start),e=pt(cls.end);
+      const s=pt(getClsAttr(cls,ds,'start')),e=pt(getClsAttr(cls,ds,'end'));
       let col=colEnd.findIndex(ce=>ce<=s);
       if(col===-1){col=colEnd.length;colEnd.push(0);}
       colEnd[col]=e;
@@ -688,8 +703,10 @@ function render(){
     for(let t=GS;t<=GE;t+=60)g+=`<div style="position:absolute;top:${(t-GS)*PPM}px;left:0;right:0;border-top:1px solid #f0ede5;pointer-events:none"></div>`;
 
     dayCls.forEach((cls,ci)=>{
-      const top=(pt(cls.start)-GS)*PPM;
-      const h=(pt(cls.end)-pt(cls.start))*PPM;
+      const effStart=getClsAttr(cls,ds,'start'),effEnd=getClsAttr(cls,ds,'end');
+      const effLevel=getClsAttr(cls,ds,'level'),effColor=getClsAttr(cls,ds,'color'),effTextbook=getClsAttr(cls,ds,'textbook');
+      const top=(pt(effStart)-GS)*PPM;
+      const h=(pt(effEnd)-pt(effStart))*PPM;
       const mks=getMKfor(cls.id,ds);
       const {col}=colAssign[ci];
       // 列幅: 2列の場合は左2/3・右1/3。3列以上は等分
@@ -720,8 +737,8 @@ function render(){
         const nf=hasNote(cls,s);
         const voidMK=MK.find(m=>m.fromCid===cls.id&&m.fromDate===ds&&m.student===s&&m.status==='void');
         const onLeave=isOnLeave(cls,s,ds);
-        let bg=cls.color==='#OUTLINE'?'#fff7f0':cls.color,tc='#1a4a1a',extra='',bord='transparent';
-        if(cls.color==='#OUTLINE'){tc='#7a3a00';bord='#e07b20';}
+        let bg=effColor==='#OUTLINE'?'#fff7f0':effColor,tc='#1a4a1a',extra='',bord='transparent';
+        if(effColor==='#OUTLINE'){tc='#7a3a00';bord='#e07b20';}
         let displayName=s;
         if(onLeave){
           bg='transparent';tc='#aaa8a0';bord='transparent';displayName=`(${s})`;
@@ -744,25 +761,25 @@ function render(){
       });
       const ec=cls.id.replace(/'/g,"\'");
       const isSpecDay=isSpec(cls.id,ds);
-      const isOutline=cls.color==='#OUTLINE';
-      const blkBg=isOutline?'#fff':cls.color;
+      const isOutline=effColor==='#OUTLINE';
+      const blkBg=isOutline?'#fff':effColor;
       const blkStyle=isOutline?'box-shadow:inset 0 0 0 1.5px #e07b20;':(isSpecDay?'box-shadow:inset 0 0 0 2.5px #e24b4a;':'');
       const skipBtn=(!isConfirmed()&&!hol&&!tempHol)?`<button class="skip-btn" onclick="event.stopPropagation();skipWeek('${ec}')" title="この週だけ非表示">skip</button>`:'';
       g+=`<div class="cls-blk" data-cid="${ec}" style="top:${top}px;height:${h}px;${leftStyle};${rightStyle};background:${blkBg};${blkStyle}${(hol||tempHol)?'opacity:.35;pointer-events:none':''}" onclick="openClsWeek('${ec}','${ds}',event)">${skipBtn}<div style="padding:${blkPad};height:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between">
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:1px">
               <div style="display:flex;align-items:center;gap:3px;flex:1;min-width:0">
-                <span style="font-size:${labelFontSize}px;opacity:.6;white-space:nowrap">${cls.start}</span>
+                <span style="font-size:${labelFontSize}px;opacity:.6;white-space:nowrap">${effStart}</span>
                 ${isSpecDay?(()=>{const sp=D.specials.find(s=>s.date===ds&&s.cid===cls.id);return sp&&sp.reason?`<span style="font-size:7px;color:#e24b4a;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sp.reason}</span>`:''})():''}
               </div>
               <div style="text-align:right;line-height:1.2;font-size:${labelFontSize}px">
-                <div style="font-weight:600">${cls.level||''}${cls.isPrivate?`<span style="color:#5b2d8e;font-size:7px"> PRI</span>`:''}</div>
-                ${(isMob||multiCol)?'':`<div style="opacity:.55;font-size:8px">${cls.textbook||''}</div>`}
+                <div style="font-weight:600">${effLevel}${cls.isPrivate?`<span style="color:#5b2d8e;font-size:7px"> PRI</span>`:''}</div>
+                ${(isMob||multiCol)?'':`<div style="opacity:.55;font-size:8px">${effTextbook}</div>`}
               </div>
             </div>
             <div style="display:flex;flex-wrap:wrap">${chips}</div>
           </div>
-          <div style="text-align:right;font-size:${labelFontSize}px;opacity:.5;white-space:nowrap;line-height:1">${cls.end}</div>
+          <div style="text-align:right;font-size:${labelFontSize}px;opacity:.5;white-space:nowrap;line-height:1">${effEnd}</div>
         </div>
       </div>`;
     });
@@ -770,10 +787,11 @@ function render(){
     // スキップされたクラスのゴースト表示
     const daySpots=(D.spots||[]).filter(sp=>sp.date===ds);
     skippedCls.forEach(cls=>{
-      const top=(pt(cls.start)-GS)*PPM;
-      const h=(pt(cls.end)-pt(cls.start))*PPM;
+      const sk=getClsAttr(cls,ds,'start'),ek=getClsAttr(cls,ds,'end');
+      const top=(pt(sk)-GS)*PPM;
+      const h=(pt(ek)-pt(sk))*PPM;
       const ec=cls.id.replace(/'/g,"\'");
-      const hasOverlap=daySpots.some(sp=>pt(sp.start)<pt(cls.end)&&pt(sp.end)>pt(cls.start));
+      const hasOverlap=daySpots.some(sp=>pt(sp.start)<pt(ek)&&pt(sp.end)>pt(sk));
       const btn=hasOverlap?'':`<button onclick="unskipWeek('${ec}')" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;color:#888;cursor:pointer;opacity:0.7">↩ 解除</button>`;
       g+=`<div style="position:absolute;top:${top}px;height:${h}px;left:2px;right:2px;border-radius:6px;background:rgba(200,200,200,0.08);z-index:2;display:flex;align-items:center;justify-content:center">${btn}</div>`;
     });
@@ -843,7 +861,7 @@ function _openAttInner(cid,ds,n){
   if(existMK)console.log('  existing MK:', JSON.stringify(existMK));
   document.getElementById('m-name').textContent=n;
   const sub=cls.subCid?D.classes.find(c=>c.id===cls.subCid):null;
-  document.getElementById('m-info').textContent=`${DJ[cls.dow]}曜 ${cls.start} ${cls.level||''} ／ 振替先: ${sub?DJ[sub.dow]+'曜'+sub.start:'なし'}`;
+  document.getElementById('m-info').textContent=`${DJ[cls.dow]}曜 ${getClsAttr(cls,ds,'start')} ${getClsAttr(cls,ds,'level')||''} ／ 振替先: ${sub?DJ[sub.dow]+'曜'+getClsAttr(sub,ds,'start'):'なし'}`;
   document.getElementById('att-modal').style.display='flex';
 }
 function setAtt(v){
@@ -901,10 +919,13 @@ function toggleConfirmWeek(){
       D.confirmedWeeks.push(getWsKey());
       // この週のクラス構成をスナップショットとして保存
       if(!D.snapshots)D.snapshots={};
+      const snapDs=fmt(wdates()[0]);
       D.snapshots[getWsKey()]=D.classes.map(c=>({
-        id:c.id,dow:c.dow,start:c.start,end:c.end,level:c.level,
-        color:c.color,subCid:c.subCid,kids:c.kids,isPrivate:c.isPrivate,
-        textbook:c.textbook,
+        id:c.id,dow:c.dow,
+        start:getClsAttr(c,snapDs,'start'),end:getClsAttr(c,snapDs,'end'),
+        level:getClsAttr(c,snapDs,'level'),color:getClsAttr(c,snapDs,'color'),
+        textbook:getClsAttr(c,snapDs,'textbook'),
+        subCid:c.subCid,kids:c.kids,isPrivate:c.isPrivate,
         students:[...c.students],
         sd:JSON.parse(JSON.stringify(c.sd||{}))
       }));
@@ -942,7 +963,7 @@ function renderClsWeekModal(){
   const ds=_cwmDs;
   const d=new Date(ds);
   const dow=d.getDay()===0?7:d.getDay();
-  document.getElementById('cwm-title').textContent=`${cls.level||''} ${cls.start}–${cls.end}`;
+  document.getElementById('cwm-title').textContent=`${getClsAttr(cls,ds,'level')||''} ${getClsAttr(cls,ds,'start')}–${getClsAttr(cls,ds,'end')}`;
   document.getElementById('cwm-date').textContent=`${DJ[dow]}曜 ${ds}`;
 
   const confirmed=isConfirmed();
@@ -1521,11 +1542,15 @@ function qs(cid){
   if(isConfirmed())return;
   const cls=D.classes.find(c=>c.id===cid);if(!cls)return;
   cls.dow=parseInt(document.getElementById('ed-d-'+cid).value);
-  cls.start=document.getElementById('ed-s-'+cid).value;
-  cls.end=document.getElementById('ed-e-'+cid).value;
-  cls.level=document.getElementById('ed-l-'+cid).value;
-  cls.textbook=document.getElementById('ed-t-'+cid).value;
-  cls.color=document.getElementById('ed-c-'+cid).value;
+  // 属性変更前に今週以降が有効な attrLog エントリを記録
+  const newStart=document.getElementById('ed-s-'+cid).value;
+  const newEnd=document.getElementById('ed-e-'+cid).value;
+  const newLevel=document.getElementById('ed-l-'+cid).value;
+  const newTextbook=document.getElementById('ed-t-'+cid).value;
+  const newColor=document.getElementById('ed-c-'+cid).value;
+  cls.start=newStart;cls.end=newEnd;cls.level=newLevel;cls.textbook=newTextbook;cls.color=newColor;
+  const from=fmt(wdates()[0]);
+  _pushAttrLog(cls,from);
   cls.subCid=document.getElementById('ed-sub-'+cid).value;
   const kval=document.getElementById('ed-k-'+cid).value;
   cls.kids=kval==='1';cls.isPrivate=kval==='2';
@@ -1850,6 +1875,7 @@ function applyLoadedData(pd,pmk){
     if(c.kids===undefined)c.kids=false;
     if(c.sd===undefined)c.sd={};
     if(!Array.isArray(c.students))c.students=[];
+    if(!Array.isArray(c.attrLog))c.attrLog=[{from:'2000-01-01',start:c.start,end:c.end,level:c.level||'',color:c.color,textbook:c.textbook||''}];
   });
   D.classes.forEach(c=>{
     if(!c.sd)return;
