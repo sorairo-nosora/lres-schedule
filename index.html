@@ -446,7 +446,7 @@ function isTempHol(ds){return (D.tempHols||[]).includes(ds);}
 function isAnyHol(ds){return isHol(ds)||isTempHol(ds);}
 function isSpec(cid,ds){return D.specials.some(s=>s.date===ds&&s.cid===cid);}
 let _viewClasses=null; // 表示中の週のクラス構成（スナップショットまたは現在）
-function dayClasses(dow){return (_viewClasses||D.classes).filter(c=>c.dow===dow).sort((a,b)=>pt(a.start)-pt(b.start));}
+function dayClasses(dow,ds){return (_viewClasses||D.classes).filter(c=>{if(c.dow!==dow)return false;if(ds&&c.joinDate&&ds<c.joinDate)return false;if(ds&&c.leaveDate&&ds>=c.leaveDate)return false;return true;}).sort((a,b)=>pt(a.start)-pt(b.start));}
 function getA(cid,ds,n){return D.att[cid+'|'+ds+'|'+n]||'present';}
 function setA(cid,ds,n,v){D.att[cid+'|'+ds+'|'+n]=v;}
 function hasNote(cls,n){return !!(cls.sd&&cls.sd[n]&&cls.sd[n].note);}
@@ -663,7 +663,7 @@ function render(){
 
   dates.forEach(d=>{
     const ds=fmt(d),dow=d.getDay()===0?7:d.getDay(),hol=isHol(ds),tempHol=isTempHol(ds);
-    const allDayCls=dayClasses(dow);
+    const allDayCls=dayClasses(dow,ds);
     const skippedCls=allDayCls.filter(c=>isWeekSkipped(c.id));
     // スキップされていないクラスのみ通常描画
     const dayCls=allDayCls.filter(c=>!isWeekSkipped(c.id));
@@ -1568,7 +1568,10 @@ function saveNewCls(){
   if(isConfirmed())return;
   const id='cls'+Date.now();
   const kval=document.getElementById('n-kids').value;
-  D.classes.push({id,dow:+document.getElementById('n-day').value,start:document.getElementById('n-start').value,end:document.getElementById('n-end').value,level:document.getElementById('n-level').value,textbook:document.getElementById('n-book').value,color:document.getElementById('n-color').value,subCid:document.getElementById('n-sub').value,kids:kval==='1',isPrivate:kval==='2',students:[],sd:{}});
+  const newDow=+document.getElementById('n-day').value;
+  const newClsDate=wdates().find(dt=>(dt.getDay()===0?7:dt.getDay())===newDow);
+  const joinDate=newClsDate?fmt(newClsDate):null;
+  D.classes.push({id,dow:newDow,start:document.getElementById('n-start').value,end:document.getElementById('n-end').value,level:document.getElementById('n-level').value,textbook:document.getElementById('n-book').value,color:document.getElementById('n-color').value,subCid:document.getElementById('n-sub').value,kids:kval==='1',isPrivate:kval==='2',students:[],sd:{},...(joinDate?{joinDate}:{})});
   openCards.add(id);save();closeM('cls-modal');renderAdmin();render();
 }
 
