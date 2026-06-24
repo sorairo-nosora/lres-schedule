@@ -152,7 +152,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 <body>
 <div class="app" id="main-app">
   <div class="header">
-    <h1 onclick="ws=currentWeekStart();render()" style="cursor:pointer" title="今週に戻る"><span style="color:#666;font-weight:500">Weekly Time Table of </span><span style="color:#c0392b;font-weight:800">L</span><span style="color:#e07b20;font-weight:800">R</span><span style="color:#6ab04c;font-weight:800">E</span><span style="color:#4aabcc;font-weight:800">S</span></h1>
+    <h1 onclick="ws=currentWeekStart();render();gotoTab('schedule',document.getElementById('tbtn-schedule'))" style="cursor:pointer" title="今週の時間割に戻る"><span style="color:#666;font-weight:500">Weekly Time Table of </span><span style="color:#c0392b;font-weight:800">L</span><span style="color:#e07b20;font-weight:800">R</span><span style="color:#6ab04c;font-weight:800">E</span><span style="color:#4aabcc;font-weight:800">S</span></h1>
     <div class="header-nav">
       <button class="btn" onclick="navWeek(-1)">‹ 前週</button>
       <span class="wlabel" id="wlabel">5/26 〜 5/30</span>
@@ -946,7 +946,55 @@ function renderClsWeekModal(){
   document.getElementById('cwm-date').textContent=`${DJ[dow]}曜 ${ds}`;
 
   const confirmed=isConfirmed();
-  const students=cls.isPrivate?(getPriStudent(cls.id)?[getPriStudent(cls.id)]:[]):cls.students.filter(s=>isMemberOn(cls,s,ds)&&!isOnLeave(cls,s,ds));
+  // プライベートクラス: 生徒選択UIを先に表示
+  if(cls.isPrivate){
+    const candidates=D.privateStudents||[];
+    const current=getPriStudent(cls.id);
+    let priHtml='<div style="margin-bottom:10px"><div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:600">生徒を選択</div><div style="display:flex;gap:5px;flex-wrap:wrap">';
+    priHtml+=`<button onclick="setCwmPriStudent('${cls.id.replace(/'/g,"\\'")}','${ds}','')" style="font-size:12px;padding:4px 10px;border-radius:8px;border:1px solid ${!current?'#5b2d8e':'#e0ddd5'};background:${!current?'#f3eeff':'#fff'};color:${!current?'#5b2d8e':'#aaa'};cursor:pointer;font-weight:${!current?'600':'400'}">空欄</button>`;
+    candidates.forEach(s=>{
+      const n=typeof s==='object'?s.name:s;
+      const en=n.replace(/'/g,"\\'");
+      const sel=current===n;
+      priHtml+=`<button onclick="setCwmPriStudent('${cls.id.replace(/'/g,"\\'")}','${ds}','${en}')" style="font-size:12px;padding:4px 10px;border-radius:8px;border:1px solid ${sel?'#5b2d8e':'#e0ddd5'};background:${sel?'#f3eeff':'#fff'};color:${sel?'#5b2d8e':'#aaa'};cursor:pointer;font-weight:${sel?'600':'400'}">${n}</button>`;
+    });
+    priHtml+='</div></div>';
+    document.getElementById('cwm-students').innerHTML=priHtml;
+    // 選択済みの生徒がいれば出席ボタン行も描画
+    if(current){
+      const att=getA(cls.id,ds,current);
+      const STATUSES=[
+        {v:'present', label:'出席',   bg:'#eaf3de', col:'#27500a'},
+        {v:'absent',  label:'欠席↺', bg:'#fcebeb', col:'#791f1f'},
+        {v:'absent-no-sub', label:'欠席✗', bg:'#f1efe8', col:'#444'},
+        {v:'late',    label:'遅刻',   bg:'#faeeda', col:'#633806'},
+      ];
+      const ec=cls.id.replace(/'/g,"\\'"),es=current.replace(/'/g,"\\'");
+      const fl=getFlags(cls.id,ds,current);
+      const note=(cls.sd&&cls.sd[current]&&cls.sd[current].note)||'';
+      const nv=note.replace(/"/g,'&quot;');
+      let btns=STATUSES.map(st=>{
+        const sel=(att===st.v)||(att==='present'&&st.v==='present');
+        const bs=sel?`background:${st.bg};color:${st.col};border-color:${st.col};font-weight:600`:'background:#fff;color:#aaa;border-color:#e0ddd5';
+        return`<button onclick="setAttWeek('${ec}','${ds}','${es}','${st.v}')" style="font-size:10px;padding:2px 5px;border-radius:6px;border:1px solid;cursor:pointer;white-space:nowrap;${bs}">${st.label}</button>`;
+      }).join('');
+      const giveBtn=confirmed?'':`<button onclick="setFlag('${ec}','${ds}','${es}','give',${!fl.give})" style="font-size:13px;padding:1px 4px;border-radius:6px;border:1px solid ${fl.give?'#c0392b':'#e0ddd5'};background:${fl.give?'#fcebeb':'#fff'};cursor:pointer;flex-shrink:0;line-height:1.4;opacity:${fl.give?'1':'0.35'}" title="封筒">✉️</button>`;
+      const recvBtn=confirmed?'':`<button onclick="setFlag('${ec}','${ds}','${es}','recv',${!fl.recv})" style="font-size:13px;padding:1px 4px;border-radius:6px;border:1px solid ${fl.recv?'#27500a':'#e0ddd5'};background:${fl.recv?'#eaf3de':'#fff'};cursor:pointer;flex-shrink:0;line-height:1.4;opacity:${fl.recv?'1':'0.35'}" title="お金">💰</button>`;
+      const noteBtn=confirmed?'':`<button onclick="toggleCwmNote(this)" style="font-size:13px;padding:1px 4px;border-radius:6px;border:1px solid ${note?'#f0c040':'#e0ddd5'};background:${note?'#fff8e6':'#fff'};cursor:pointer;flex-shrink:0;line-height:1.4;opacity:${note?'1':'0.35'}" title="備考">📝</button>`;
+      const noteRow=confirmed?'':`<div class="cwm-note-row" style="display:none;margin-top:5px"><input type="text" value="${nv}" placeholder="備考を入力" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:12px" onchange="setCwmNote('${ec}','${es}',this.value)"></div>`;
+      document.getElementById('cwm-students').innerHTML+=`<div style="padding:7px 0;border-top:1px solid #f0ede5"><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px;font-weight:600;min-width:50px;flex-shrink:0">${current}</span><div style="display:flex;gap:2px;flex:1">${btns}</div><div style="display:flex;gap:2px;flex-shrink:0">${giveBtn}${recvBtn}${noteBtn}</div></div>${noteRow}</div>`;
+    }
+    // 振替参加者
+    const mks=getMKfor(cls.id,ds).filter(m=>m.status!=='void');
+    let mkHtml='';
+    if(mks.length>0){
+      mkHtml='<div style="font-size:11px;color:#888;margin-top:12px;margin-bottom:4px;font-weight:600">振替参加</div>';
+      mks.forEach(m=>{const fc=D.classes.find(c=>c.id===m.fromCid);mkHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0ede5"><span style="font-size:13px;color:#666">${m.student}</span><span style="font-size:10px;background:#f1f0eb;color:#888;padding:2px 7px;border-radius:6px">${fc?DJ[fc.dow]+'曜 '+fc.start:'別クラス'}から</span></div>`;});
+    }
+    document.getElementById('cwm-mk').innerHTML=mkHtml;
+    return;
+  }
+  const students=cls.students.filter(s=>isMemberOn(cls,s,ds)&&!isOnLeave(cls,s,ds));
   const STATUSES=[
     {v:'present', label:'出席',   bg:'#eaf3de', col:'#27500a'},
     {v:'absent',  label:'欠席↺', bg:'#fcebeb', col:'#791f1f'},
@@ -1002,6 +1050,24 @@ function renderClsWeekModal(){
     });
   }
   document.getElementById('cwm-mk').innerHTML=mkHtml;
+}
+function setCwmPriStudent(cid,ds,name){
+  if(isConfirmed())return;
+  const cls=D.classes.find(c=>c.id===cid);if(!cls)return;
+  if(!D.priSel)D.priSel={};
+  const key=cid+'|'+getWsKey();
+  if(name){
+    D.priSel[key]=name;
+    // レベル・テキストをクラスに反映
+    const ps=(D.privateStudents||[]).find(s=>(typeof s==='object'?s.name:s)===name);
+    if(ps&&typeof ps==='object'){if(ps.level)cls.level=ps.level;if(ps.textbook)cls.textbook=ps.textbook;}
+    // 即「出席」に設定
+    setA(cid,ds,name,'present');
+    removeMK(cid,ds,name);
+  } else {
+    delete D.priSel[key];
+  }
+  save();render();renderClsWeekModal();
 }
 function setAttWeek(cid,ds,n,v){
   if(isConfirmed())return;
