@@ -750,13 +750,14 @@ function render(){
     });
 
     // スキップされたクラスのゴースト表示
+    const daySpots=(D.spots||[]).filter(sp=>sp.date===ds);
     skippedCls.forEach(cls=>{
       const top=(pt(cls.start)-GS)*PPM;
       const h=(pt(cls.end)-pt(cls.start))*PPM;
       const ec=cls.id.replace(/'/g,"\'");
-      g+=`<div style="position:absolute;top:${top}px;height:${h}px;left:2px;right:2px;border-radius:6px;border:1.5px dashed rgba(180,160,60,0.45);background:rgba(200,200,200,0.12);z-index:2;display:flex;align-items:center;justify-content:center">
-        <button onclick="unskipWeek('${ec}')" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid #bbb;background:#fff;color:#666;cursor:pointer;opacity:0.8">↩ 解除</button>
-      </div>`;
+      const hasOverlap=daySpots.some(sp=>pt(sp.start)<pt(cls.end)&&pt(sp.end)>pt(cls.start));
+      const btn=hasOverlap?'':`<button onclick="unskipWeek('${ec}')" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;color:#888;cursor:pointer;opacity:0.7">↩ 解除</button>`;
+      g+=`<div style="position:absolute;top:${top}px;height:${h}px;left:2px;right:2px;border-radius:6px;background:rgba(200,200,200,0.08);z-index:2;display:flex;align-items:center;justify-content:center">${btn}</div>`;
     });
 
     // スポット授業
