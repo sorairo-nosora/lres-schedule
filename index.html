@@ -729,7 +729,7 @@ function render(){
       const isSpecDay=isSpec(cls.id,ds);
       const isOutline=cls.color==='#OUTLINE';
       const blkBg=isOutline?'#fff':cls.color;
-      const blkStyle=isOutline?'box-shadow:inset 0 0 0 2.5px #e07b20;':(isSpecDay?'box-shadow:inset 0 0 0 2.5px #e24b4a;':'');
+      const blkStyle=isOutline?'box-shadow:inset 0 0 0 1.5px #e07b20;':(isSpecDay?'box-shadow:inset 0 0 0 2.5px #e24b4a;':'');
       const skipBtn=(!isConfirmed()&&!hol&&!tempHol)?`<button class="skip-btn" onclick="event.stopPropagation();skipWeek('${ec}')" title="この週だけ非表示">skip</button>`:'';
       g+=`<div class="cls-blk" data-cid="${ec}" style="top:${top}px;height:${h}px;${leftStyle};${rightStyle};background:${blkBg};${blkStyle}${(hol||tempHol)?'opacity:.35;pointer-events:none':''}" onclick="openClsAdmin('${ec}',event)">${skipBtn}<div style="padding:${blkPad};height:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between">
           <div>
