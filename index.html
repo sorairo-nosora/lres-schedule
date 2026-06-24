@@ -764,7 +764,7 @@ function render(){
       const stop=(pt(sp.start)-GS)*PPM;
       const sh=(pt(sp.end)-pt(sp.start))*PPM;
       const sec=sp.id.replace(/'/g,"\'");
-      g+=`<div class="spot-blk" style="top:${stop}px;height:${sh}px;left:2px;right:2px;background:#fff;box-shadow:inset 0 0 0 1.5px #e07b20;padding:3px 5px" onclick="rmSpotConfirm('${sec}')">
+      g+=`<div class="spot-blk" style="top:${stop}px;height:${sh}px;left:2px;right:2px;background:#fff;border:1.5px solid #e07b20;padding:3px 5px" onclick="rmSpotConfirm('${sec}')">
         <div style="font-size:8px;color:#b06010;opacity:.8;margin-bottom:1px">${sp.start}–${sp.end} <span style="background:rgba(224,123,32,.15);border-radius:3px;padding:0 3px">SPOT</span></div>
         <div style="font-size:10px;font-weight:600;color:#7a3a00">${sp.students||''}</div>
       </div>`;
