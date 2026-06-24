@@ -1848,10 +1848,40 @@ function save(){
 }
 
 function pruneOldSnapshots(){
-  if(!D.snapshots)return;
   const minKey=fmt(getMinWeek());
   let pruned=false;
-  Object.keys(D.snapshots).forEach(k=>{if(k<minKey){delete D.snapshots[k];pruned=true;}});
+  // スナップショット
+  if(D.snapshots){
+    Object.keys(D.snapshots).forEach(k=>{if(k<minKey){delete D.snapshots[k];pruned=true;}});
+  }
+  // 出席記録: キーは cid|date|name — dateが3ヶ月より古ければ削除
+  Object.keys(D.att).forEach(k=>{
+    const date=k.split('|')[1];
+    if(date&&date<minKey){delete D.att[k];pruned=true;}
+  });
+  // フラグ記録
+  if(D.flags){
+    Object.keys(D.flags).forEach(k=>{
+      const date=k.split('|')[1];
+      if(date&&date<minKey){delete D.flags[k];pruned=true;}
+    });
+  }
+  // 振替記録: fromDate or toDate が両方3ヶ月より古ければ削除
+  const mkBefore=MK.length;
+  MK=MK.filter(m=>!(m.fromDate<minKey&&(!m.toDate||m.toDate<minKey)));
+  if(MK.length!==mkBefore)pruned=true;
+  // attrLog: 3ヶ月より古いエントリを各クラスから削除（最低1件は残す）
+  D.classes.forEach(cls=>{
+    if(!Array.isArray(cls.attrLog)||cls.attrLog.length<=1)return;
+    const kept=cls.attrLog.filter(e=>e.from>=minKey);
+    // minKey直前の最新エントリも1件残す（過去週表示の基準値として必要）
+    if(kept.length<cls.attrLog.length){
+      const before=cls.attrLog.filter(e=>e.from<minKey);
+      const anchor=before[before.length-1];
+      cls.attrLog=anchor?[anchor,...kept]:kept;
+      pruned=true;
+    }
+  });
   if(pruned)save();
 }
 function applyLoadedData(pd,pmk){
