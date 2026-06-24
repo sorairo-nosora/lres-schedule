@@ -57,6 +57,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .hbtn{padding:5px 10px;border:1px solid #ccc;border-radius:8px;font-size:12px;cursor:pointer;margin:2px;background:#fff}
 .hbtn.on{background:#fcebeb;border-color:#e24b4a;color:#791f1f;font-weight:600}
 .iv-block{position:absolute;left:2px;right:2px;border-radius:6px;background:#f3eeff;border:1px solid #c9a8f0;padding:3px 6px;font-size:9px;color:#5b2d8e;overflow:hidden;z-index:5}
+.cls-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer}
+.cls-blk .skip-btn{display:none;position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.18);color:#fff;border:none;border-radius:4px;font-size:9px;padding:1px 4px;cursor:pointer;z-index:10;line-height:1.4}
+.cls-blk:hover .skip-btn{display:block}
+.spot-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;border:2px dashed rgba(0,0,0,0.2);z-index:6}
 .tag{padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block}
 /* ===== Firebase連携UI ===== */
 #fb-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid transparent;transition:all .3s;white-space:nowrap;cursor:pointer}
@@ -233,6 +237,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     </div>
   </div>
 </div>
+</div>
+
+<div class="overlay" id="spot-modal" style="display:none" onclick="if(event.target===this)closeM('spot-modal')">
+  <div class="modal">
+    <h3>✨ スポット授業</h3>
+    <div class="msub" id="spot-date-label"></div>
+    <div style="margin:12px 0;display:flex;flex-direction:column;gap:8px">
+      <div class="fr"><label>開始</label><input type="time" id="spot-start" step="300"></div>
+      <div class="fr"><label>終了</label><input type="time" id="spot-end" step="300"></div>
+      <div class="fr"><label>生徒名</label><input type="text" id="spot-students" placeholder="例: 田中、鈴木"></div>
+      <div class="fr"><label>色</label><input type="color" id="spot-color" value="#dce8ff" style="width:60px;height:30px;border:none;cursor:pointer"></div>
+    </div>
+    <button class="btn btn-p" onclick="addSpot()" style="width:100%;margin-bottom:8px">追加</button>
+    <div class="mcancel" onclick="closeM('spot-modal')">キャンセル</div>
+  </div>
 </div>
 
 <div class="overlay" id="att-modal" style="display: none;" onclick="if(event.target===this)closeM('att-modal')">
@@ -631,7 +650,8 @@ function render(){
 
   dates.forEach(d=>{
     const ds=fmt(d),dow=d.getDay()===0?7:d.getDay(),hol=isHol(ds),tempHol=isTempHol(ds);
-    const dayCls=dayClasses(dow);
+    // スキップされていないクラスのみ
+    const dayCls=dayClasses(dow).filter(c=>!isWeekSkipped(c.id));
     const isMob=window.innerWidth<=600;
 
     // ===== 列割り当てアルゴリズム（時間被り対応）=====
@@ -708,7 +728,8 @@ function render(){
       const isOutline=cls.color==='#OUTLINE';
       const blkBg=isOutline?'#fff':cls.color;
       const blkStyle=isOutline?'box-shadow:inset 0 0 0 2.5px #e07b20;':(isSpecDay?'box-shadow:inset 0 0 0 2.5px #e24b4a;':'');
-      g+=`<div style="position:absolute;top:${top}px;height:${h}px;${leftStyle};${rightStyle};border-radius:6px;background:${blkBg};overflow:hidden;cursor:pointer;${blkStyle}${(hol||tempHol)?'opacity:.35;pointer-events:none':''}" onclick="openClsAdmin('${ec}',event)"><div style="padding:${blkPad};height:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between">
+      const skipBtn=(!isConfirmed()&&!hol&&!tempHol)?`<button class="skip-btn" onclick="event.stopPropagation();skipWeek('${ec}')" title="この週だけ非表示">skip</button>`:'';
+      g+=`<div class="cls-blk" data-cid="${ec}" style="top:${top}px;height:${h}px;${leftStyle};${rightStyle};background:${blkBg};${blkStyle}${(hol||tempHol)?'opacity:.35;pointer-events:none':''}" onclick="openClsAdmin('${ec}',event)">${skipBtn}<div style="padding:${blkPad};height:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between">
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:1px">
               <div style="display:flex;align-items:center;gap:3px;flex:1;min-width:0">
@@ -727,6 +748,22 @@ function render(){
       </div>`;
     });
 
+    // スポット授業
+    (D.spots||[]).filter(sp=>sp.date===ds).forEach(sp=>{
+      const stop=(pt(sp.start)-GS)*PPM;
+      const sh=(pt(sp.end)-pt(sp.start))*PPM;
+      const sec=sp.id.replace(/'/g,"\'");
+      g+=`<div class="spot-blk" style="top:${stop}px;height:${sh}px;left:2px;right:2px;background:${sp.color};padding:3px 5px" onclick="rmSpotConfirm('${sec}')">
+        <div style="font-size:8px;opacity:.6;margin-bottom:1px">${sp.start}–${sp.end} <span style="background:rgba(0,0,0,.12);border-radius:3px;padding:0 3px">SPOT</span></div>
+        <div style="font-size:10px;font-weight:600;color:#1a3a6a">${sp.students||''}</div>
+      </div>`;
+    });
+
+    // 空エリアタップ → スポット授業追加
+    if(!isConfirmed()&&!hol&&!tempHol){
+      g+=`<div style="position:absolute;inset:0;z-index:1" onclick="openSpotModal('${ds}',event)"></div>`;
+    }
+
     (D.interviews||[]).filter(iv=>iv.date===ds).forEach(iv=>{
       const top2=(pt(iv.time)-GS)*PPM;
       g+=`<div class="iv-block" style="top:${top2}px;height:${30*PPM}px">
@@ -744,6 +781,23 @@ function render(){
   });
   g+=`</div>`;
   document.getElementById('grid').innerHTML=g;
+
+  // スマホ長押しでクラスをこの週だけスキップ
+  if(!isConfirmed()){
+    document.querySelectorAll('.cls-blk').forEach(el=>{
+      let timer=null;
+      el.addEventListener('touchstart',()=>{
+        timer=setTimeout(()=>{
+          timer=null;
+          const cid=el.getAttribute('data-cid');
+          if(!cid)return;
+          customConfirm('このクラスをこの週だけ非表示にしますか？',ok=>{if(ok)skipWeek(cid);});
+        },600);
+      },{passive:true});
+      el.addEventListener('touchend',()=>{if(timer){clearTimeout(timer);timer=null;}},{passive:true});
+      el.addEventListener('touchmove',()=>{if(timer){clearTimeout(timer);timer=null;}},{passive:true});
+    });
+  }
 }
 
 function openAtt(cid,ds,n){
@@ -982,6 +1036,65 @@ function toggleHol(ds){
     recheckAllMakeups();
   }
   save();render();renderHolTab();
+}
+
+// ===== 週スキップ =====
+function isWeekSkipped(cid){
+  return (D.weekSkips||[]).some(s=>s.cid===cid&&s.weekKey===getWsKey());
+}
+function skipWeek(cid){
+  if(isConfirmed())return;
+  if(!D.weekSkips)D.weekSkips=[];
+  if(!isWeekSkipped(cid)){D.weekSkips.push({cid,weekKey:getWsKey()});}
+  save();render();
+}
+function unskipWeek(cid){
+  D.weekSkips=(D.weekSkips||[]).filter(s=>!(s.cid===cid&&s.weekKey===getWsKey()));
+  save();render();
+}
+
+// ===== スポット授業 =====
+let _spotDate='';
+function openSpotModal(ds,e){
+  if(isConfirmed())return;
+  // クラスブロックやスポットブロック上のクリックは無視
+  if(e&&e.target&&(e.target.closest('.cls-blk')||e.target.closest('.spot-blk')||e.target.closest('.iv-block')))return;
+  _spotDate=ds;
+  document.getElementById('spot-date-label').textContent=ds;
+  // タップ位置から時間を概算
+  const col=e&&e.currentTarget;
+  if(col&&e){
+    const rect=col.getBoundingClientRect();
+    const y=e.clientY-rect.top;
+    const mins=Math.round((y/PPM+GS)/15)*15;
+    const hh=String(Math.floor(mins/60)).padStart(2,'0');
+    const mm=String(mins%60).padStart(2,'0');
+    const endMins=Math.min(mins+55,GE);
+    const eh=String(Math.floor(endMins/60)).padStart(2,'0');
+    const em=String(endMins%60).padStart(2,'0');
+    document.getElementById('spot-start').value=`${hh}:${mm}`;
+    document.getElementById('spot-end').value=`${eh}:${em}`;
+  }
+  document.getElementById('spot-students').value='';
+  document.getElementById('spot-modal').style.display='flex';
+}
+function addSpot(){
+  const start=document.getElementById('spot-start').value;
+  const end=document.getElementById('spot-end').value;
+  const students=document.getElementById('spot-students').value.trim();
+  const color=document.getElementById('spot-color').value;
+  if(!start||!end||!students)return;
+  if(!D.spots)D.spots=[];
+  D.spots.push({id:'sp-'+Date.now(),date:_spotDate,start,end,students,color});
+  save();closeM('spot-modal');render();
+}
+function rmSpotConfirm(id){
+  if(isConfirmed())return;
+  customConfirm('このスポット授業を削除しますか？',ok=>{
+    if(!ok)return;
+    D.spots=(D.spots||[]).filter(s=>s.id!==id);
+    save();render();
+  });
 }
 
 function addIv(){
@@ -1516,6 +1629,9 @@ function applyLoadedData(pd,pmk){
   if(!Array.isArray(D.confirmedWeeks))D.confirmedWeeks=[];
   if(!Array.isArray(D.privateStudents))D.privateStudents=[...DEFAULT_PRI];
   if(!D.priSel||typeof D.priSel!=='object')D.priSel={};
+  if(!D.snapshots||typeof D.snapshots!=='object')D.snapshots={};
+  if(!Array.isArray(D.spots))D.spots=[];
+  if(!Array.isArray(D.weekSkips))D.weekSkips=[];
   D.classes.forEach(c=>{
     if(c.isPrivate===undefined)c.isPrivate=false;
     if(c.kids===undefined)c.kids=false;
