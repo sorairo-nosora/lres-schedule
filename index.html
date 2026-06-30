@@ -537,7 +537,6 @@ function findSubDate(subCid,afterDs,skipSpec=true){
 function registerMK(fromCid,fromDate,student){
   console.log('registerMK: fromCid='+fromCid+' fromDate='+fromDate+' student='+student);
   if(MK.find(m=>m.fromCid===fromCid&&m.fromDate===fromDate&&m.student===student)){console.log('  → skip: already registered for same day');return;}
-  if(MK.find(m=>m.fromCid===fromCid&&m.student===student&&m.status!=='void')){console.log('  → skip: already has active MK');return;}
   const cls=D.classes.find(c=>c.id===fromCid);
   if(!cls||!cls.subCid){console.log('  → skip: no subCid');return;}
   // 休校のみスキップして最初の候補日を探す（振替不可はスキップしない）
