@@ -1971,7 +1971,17 @@ function printSchedule(){
   scroll.style.overflow='visible';
   render();
 
+  // レンダリング後、はみ出しているブロックのチップを縮小
   setTimeout(()=>{
+    document.querySelectorAll('.cls-blk').forEach(blk=>{
+      const inner=blk.querySelector('div');
+      if(!inner)return;
+      let fs=11;
+      while(inner.scrollHeight>blk.clientHeight&&fs>7){
+        fs--;
+        blk.querySelectorAll('.chip,.chip-mk').forEach(c=>{c.style.fontSize=fs+'px';});
+      }
+    });
     window.print();
     _printMode=false;
     PPM=PPM_orig;
