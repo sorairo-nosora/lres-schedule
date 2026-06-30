@@ -391,28 +391,40 @@ let openCards=new Set();
 let undoStack=[];
 let _lastSnapshot=null;
 let hasUnsavedChanges=false;
+let pendingCloudSave=false; // Firebase未接続時に押された保存を保留
 
 function updateUndoUI(){
   const sb=document.getElementById('save-btn');
   const ub=document.getElementById('undo-btn');
   if(sb){
-    sb.disabled=!hasUnsavedChanges;
-    sb.style.background=hasUnsavedChanges?'#fcebeb':'';
-    sb.style.borderColor=hasUnsavedChanges?'#f09595':'';
-    sb.style.color=hasUnsavedChanges?'#791f1f':'';
+    if(pendingCloudSave){
+      sb.disabled=true;
+      sb.style.background='#fff8e6';
+      sb.style.borderColor='#f0c040';
+      sb.style.color='#7a5a00';
+      sb.textContent='⏳ 同期待ち';
+    } else {
+      sb.disabled=!hasUnsavedChanges;
+      sb.style.background=hasUnsavedChanges?'#fcebeb':'';
+      sb.style.borderColor=hasUnsavedChanges?'#f09595':'';
+      sb.style.color=hasUnsavedChanges?'#791f1f':'';
+      sb.textContent='💾 保存';
+    }
   }
   if(ub)ub.disabled=undoStack.length===0;
 }
 
 function saveToCloud(){
   if(!hasUnsavedChanges)return;
+  undoStack=[];
+  hasUnsavedChanges=false;
   if(!fbDb||!fbConnected){
-    customConfirm('Firebaseに接続されていません。\n変更はこのブラウザには保存されていますが、クラウドへの同期には接続が必要です。\n\n接続状態を確認してから再度「💾 保存」を押してください。',()=>{});
+    // 未接続でも保存ボタンは受け付け、再接続後に自動送信
+    pendingCloudSave=true;
+    updateUndoUI();
     return;
   }
   fbPush();
-  undoStack=[];
-  hasUnsavedChanges=false;
   updateUndoUI();
 }
 
@@ -1773,6 +1785,12 @@ function initFirebase(){
         firstConnect=false;
         updateFbStatus('connected','🟢 接続中');
         document.getElementById('fb-sync-btn').style.display='';
+        // 保留中の保存があれば自動送信
+        if(pendingCloudSave){
+          pendingCloudSave=false;
+          fbPush();
+          updateUndoUI();
+        }
       }else{
         if(!firstConnect){updateFbStatus('error','🟡 オフライン');}
       }
