@@ -132,7 +132,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   #print-week-label{display:none!important}
   /* 印刷時チップ */
   #grid .chip,#grid .chip-mk{
-    font-size:11px!important;
     line-height:1.0!important;
     padding:0 2px!important;
     margin:0 1px 1px 0!important;
@@ -1995,9 +1994,11 @@ function printSchedule(){
       const inner=blk.querySelector('div');
       if(!inner)return;
       let fs=11;
+      // まず11pxをセットしてからはみ出し確認・縮小
+      blk.querySelectorAll('.chip,.chip-mk').forEach(c=>{c.style.setProperty('font-size',fs+'px','important');});
       while(inner.scrollHeight>blk.clientHeight&&fs>7){
         fs--;
-        blk.querySelectorAll('.chip,.chip-mk').forEach(c=>{c.style.fontSize=fs+'px';});
+        blk.querySelectorAll('.chip,.chip-mk').forEach(c=>{c.style.setProperty('font-size',fs+'px','important');});
       }
     });
     window.print();
