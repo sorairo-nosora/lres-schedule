@@ -1980,8 +1980,7 @@ function printSchedule(){
   // A4縦: 297mm - 上下margin(8+6)mm=14mm → 283mm
   // 96dpi換算: 283 * 96/25.4 ≈ 1069px
   // 日付ヘッダ約40px を引いた残り → 約1029px
-  // 少し余裕を持たせて0.95倍
-  const printH=(1069-40)*0.95;
+  const printH=(1069-40);
   _printMode=true;
   PPM=printH/(GE-GS);
   GH=(GE-GS)*PPM;
