@@ -406,6 +406,10 @@ function updateUndoUI(){
 
 function saveToCloud(){
   if(!hasUnsavedChanges)return;
+  if(!fbDb||!fbConnected){
+    customConfirm('Firebaseに接続されていません。\n変更はこのブラウザには保存されていますが、クラウドへの同期には接続が必要です。\n\n接続状態を確認してから再度「💾 保存」を押してください。',()=>{});
+    return;
+  }
   fbPush();
   undoStack=[];
   hasUnsavedChanges=false;
@@ -1781,6 +1785,12 @@ function initFirebase(){
 
 async function fbPullData(){
   if(!fbDb){alert('Firebaseに接続されていません');return;}
+  if(hasUnsavedChanges){
+    const ok=await new Promise(resolve=>{
+      customConfirm('⚠️ 未保存の変更があります。\nクラウドから最新データを取得すると、保存されていない変更が上書きされます。\n\n続けますか？',resolve);
+    });
+    if(!ok)return;
+  }
   const btn=document.getElementById('fb-sync-btn');
   btn.textContent='取得中...';btn.disabled=true;
   updateFbStatus('syncing','🔵 読込中...');
