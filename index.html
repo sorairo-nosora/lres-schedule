@@ -1778,12 +1778,18 @@ function initFirebase(){
     // DB接続監視
     fbDb.ref('.info/connected').off();
     let firstConnect=true;
+    let autoPulled=false;
     fbDb.ref('.info/connected').on('value',snap=>{
       fbConnected=snap.val()===true;
       if(fbConnected){
-        firstConnect=false;
         updateFbStatus('connected','🟢 接続中');
         document.getElementById('fb-sync-btn').style.display='';
+        // 開いた直後（初回接続時）は自動的に最新データを取得し、更新ボタン押し忘れによる上書き事故を防止
+        if(firstConnect&&!autoPulled&&!pendingCloudSave){
+          autoPulled=true;
+          fbPullData();
+        }
+        firstConnect=false;
         // 保留中の保存があれば自動送信
         if(pendingCloudSave){
           pendingCloudSave=false;
