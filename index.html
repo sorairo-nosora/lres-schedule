@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v42: 保存ボタン＋アンドゥ機能追加。自動Firebase保存を廃止し、💾保存ボタン押下時のみクラウドに保存。↩元に戻すで前回保存まで何回でも取り消し可能。 -->
+<!-- v63: 時間割グリッド左端の時刻軸列（38px）を削除。開始・終了時刻は各クラスブロックに表示済み、時間帯は横線で判別可能なため、日付列の横幅を広く使えるように変更。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -124,11 +124,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   #grid-scroll{overflow:visible!important;flex:none!important;height:auto!important}
   #grid-wrap{page-break-inside:avoid;display:block;overflow:visible!important}
   #day-hdr{display:flex!important;min-width:0!important;border-bottom:1.5px solid #aaa;position:static!important;overflow:visible!important}
-  #day-hdr>div:first-child{width:24px!important;flex:none!important;min-width:0!important;max-width:none!important}
-  #day-hdr>div:not(:first-child){flex:1!important;max-width:none!important;font-size:9px!important;padding:2px 1px!important;line-height:1.3!important}
+  #day-hdr>div{flex:1!important;max-width:none!important;font-size:9px!important;padding:2px 1px!important;line-height:1.3!important}
   #grid{min-width:0!important;page-break-inside:avoid;overflow:visible!important}
   #grid>div{overflow:visible!important}
-  #grid>div>div:first-child{width:24px!important;flex:none!important}
   #print-week-label{display:none!important}
   /* 印刷時チップ */
   #grid .chip,#grid .chip-mk{
@@ -672,7 +670,7 @@ function render(){
     dayBadges[ds]=monthBadges(dow,d.getFullYear(),d.getMonth()+1)[ds]||[];
   });
 
-  let hdr=`<div style="width:38px;flex-shrink:0;border-right:1px solid #e0ddd5"></div>`;
+  let hdr='';
   dates.forEach(d=>{
     const ds=fmt(d),dow=d.getDay()===0?7:d.getDay(),hol=isHol(ds);
     const tempHol=isTempHol(ds);
@@ -685,13 +683,6 @@ function render(){
   document.getElementById('day-hdr').innerHTML=hdr;
 
   let g=`<div style="display:flex">`;
-  g+=`<div style="width:38px;flex-shrink:0;border-right:1px solid #e0ddd5;position:relative;height:${GH}px">`;
-  for(let t=GS;t<=GE;t+=60){
-    const y=(t-GS)*PPM;
-    g+=`<div style="position:absolute;top:${y}px;right:3px;font-size:9px;color:#bbb;transform:translateY(-50%)">${Math.floor(t/60)}:00</div>`;
-    g+=`<div style="position:absolute;top:${y}px;left:0;right:0;border-top:1px solid #e8e6e0"></div>`;
-  }
-  g+=`</div>`;
 
   dates.forEach(d=>{
     const ds=fmt(d),dow=d.getDay()===0?7:d.getDay(),hol=isHol(ds),tempHol=isTempHol(ds);
