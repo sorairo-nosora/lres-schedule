@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v63: 時間割グリッド左端の時刻軸列（38px）を削除。開始・終了時刻は各クラスブロックに表示済み、時間帯は横線で判別可能なため、日付列の横幅を広く使えるように変更。 -->
+<!-- v64: 休校・面談タブに「休校日インポート」を追加。Lesson Report Editorが出力するJSON（{holidays:[{date,label}]}）を月表示カレンダーで確認しながら選択し、今日以降・未確定週の日付だけを通常休校（D.hols、振替スライドあり）として一括登録できる。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -185,7 +185,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   </div>
   <div id="tab-holiday" style="display: none; padding: 16px; overflow: auto; flex: 1 1 0%;">
     <div class="sec">
-      <h3>休校日（この週）</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="margin-bottom:0">休校日（この週）</h3>
+        <button class="btn" style="font-size:11px" onclick="openImportHolModal()">📥 インポート</button>
+      </div>
       <p style="font-size:12px;color:#888;margin-bottom:8px">タップで休校日に設定。振替予定があった生徒は翌週以降にスライドします。</p>
       <div id="hol-btns" style="display:flex;flex-wrap:wrap"></div>
     </div>
@@ -335,6 +338,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <button class="btn" onclick="clearFbConfig()" style="color:#a32d2d;border-color:#f09595">接続解除</button>
       <button class="btn" onclick="closeFbSetup()">閉じる</button>
     </div>
+  </div>
+</div>
+
+<!-- 休校日インポート -->
+<div class="overlay" id="import-hol-modal" style="display:none" onclick="if(event.target===this)closeM('import-hol-modal')">
+  <div class="modal" style="max-width:420px">
+    <h3>📥 休校日インポート</h3>
+    <p style="font-size:12px;color:#888;margin:8px 0 12px">Lesson Report Editor から出力したJSONファイルを選択してください。今日以降・未確定週の日付のみ登録できます。</p>
+    <input type="file" id="import-hol-file" accept="application/json,.json" onchange="onImportHolFile(event)" style="width:100%;font-size:12px;margin-bottom:12px">
+    <div id="import-hol-cal-wrap" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <button class="btn" style="padding:3px 9px" onclick="importHolCalNav(-1)">‹</button>
+        <span id="import-hol-cal-title" style="font-size:13px;font-weight:600"></span>
+        <button class="btn" style="padding:3px 9px" onclick="importHolCalNav(1)">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px;font-size:10px;font-weight:600;color:#aaa;text-align:center">
+        <div style="color:#e24b4a">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div style="color:#0c447c">土</div>
+      </div>
+      <div id="import-hol-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:10px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span id="import-hol-count" style="font-size:11px;color:#888"></span>
+        <div style="display:flex;gap:6px">
+          <button class="btn" style="font-size:11px;padding:3px 8px" onclick="importHolSelectAll(true)">すべて選択</button>
+          <button class="btn" style="font-size:11px;padding:3px 8px" onclick="importHolSelectAll(false)">すべて解除</button>
+        </div>
+      </div>
+      <div id="import-hol-list" style="max-height:140px;overflow:auto;border:1px solid #e0ddd5;border-radius:6px;padding:6px 10px;margin-bottom:12px"></div>
+    </div>
+    <button class="btn btn-p" id="import-hol-apply" onclick="applyImportHol()" disabled style="width:100%;margin-bottom:8px">選択した日付を休校として登録</button>
+    <div class="mcancel" onclick="closeM('import-hol-modal')">キャンセル</div>
   </div>
 </div>
 
@@ -1243,6 +1276,18 @@ function delSpecGroup(idxStr){
   save();renderSpecList();render();
 }
 
+// 休校日を1件追加（振替スライド込み）。既に休校ならfalseを返す
+function addHolInternal(ds){
+  if(isHol(ds))return false;
+  D.hols.push(ds);
+  MK.filter(m=>m.status!=='void'&&m.toDate===ds).forEach(m=>{
+    const nd=findSubDate(m.toCid,ds,true); // 休校スライドはskipSpec=true
+    if(nd){m.toDate=nd;}
+    else{m.status='void';m.voidReason='hol';}
+  });
+  return true;
+}
+
 function toggleHol(ds){
   if(isConfirmed())return;
   if(isHol(ds)){
@@ -1253,15 +1298,154 @@ function toggleHol(ds){
       if(nd){m.toDate=nd;delete m.status;delete m.voidReason;}
     });
   } else {
-    D.hols.push(ds);
-    MK.filter(m=>m.status!=='void'&&m.toDate===ds).forEach(m=>{
-      const nd=findSubDate(m.toCid,ds,true); // 休校スライドはskipSpec=true
-      if(nd){m.toDate=nd;}
-      else{m.status='void';m.voidReason='hol';}
-    });
+    addHolInternal(ds);
     recheckAllMakeups();
   }
   save();render();renderHolTab();
+}
+
+// ===== 休校日インポート（Lesson Report Editorからの手動連携）=====
+let _importHolCandidates=[]; // {date,label,already,past,confirmed,selected}
+let _importHolViewY=0,_importHolViewM=0; // カレンダーの表示中年月（月は0始まり）
+
+function openImportHolModal(){
+  document.getElementById('import-hol-file').value='';
+  _importHolCandidates=[];
+  document.getElementById('import-hol-cal-wrap').style.display='none';
+  document.getElementById('import-hol-apply').disabled=true;
+  document.getElementById('import-hol-modal').style.display='flex';
+}
+
+function onImportHolFile(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      const list=Array.isArray(data)?data:Array.isArray(data.holidays)?data.holidays:null;
+      if(!list)throw new Error('holidays配列が見つかりません');
+      const today=fmt(new Date());
+      _importHolCandidates=list
+        .filter(h=>h&&typeof h.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(h.date))
+        .map(h=>{
+          const p=h.date.split('-').map(Number);
+          const wkKey=fmt(monday(new Date(p[0],p[1]-1,p[2])));
+          const already=isHol(h.date);
+          const past=h.date<today;
+          const confirmed=(D.confirmedWeeks||[]).includes(wkKey);
+          return{date:h.date,label:h.label||'',already,past,confirmed,selected:!already&&!past&&!confirmed};
+        })
+        .sort((a,b)=>a.date.localeCompare(b.date));
+      if(_importHolCandidates.length===0)throw new Error('有効な日付データがありません');
+      // 選択可能な候補があればその月、なければ先頭候補の月を初期表示にする
+      const firstTarget=_importHolCandidates.find(c=>c.selected)||_importHolCandidates[0];
+      const p=firstTarget.date.split('-').map(Number);
+      _importHolViewY=p[0];_importHolViewM=p[1]-1;
+      document.getElementById('import-hol-cal-wrap').style.display='block';
+      renderImportHolCalendar();
+      renderImportHolList();
+    }catch(err){
+      document.getElementById('import-hol-cal-wrap').style.display='none';
+      document.getElementById('import-hol-apply').disabled=true;
+      alert('JSONの読み込みに失敗しました: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function importHolCalNav(dir){
+  _importHolViewM+=dir;
+  if(_importHolViewM<0){_importHolViewM=11;_importHolViewY--;}
+  else if(_importHolViewM>11){_importHolViewM=0;_importHolViewY++;}
+  renderImportHolCalendar();
+  renderImportHolList();
+}
+
+function toggleImportHolDay(ds){
+  const c=_importHolCandidates.find(x=>x.date===ds);
+  if(!c||c.already||c.past||c.confirmed)return;
+  c.selected=!c.selected;
+  renderImportHolCalendar();
+  renderImportHolList();
+}
+
+function importHolSelectAll(flag){
+  _importHolCandidates.forEach(c=>{ if(!c.already&&!c.past&&!c.confirmed)c.selected=flag; });
+  renderImportHolCalendar();
+  renderImportHolList();
+}
+
+function renderImportHolCalendar(){
+  const y=_importHolViewY,m=_importHolViewM;
+  document.getElementById('import-hol-cal-title').textContent=`${y}年 ${m+1}月`;
+  const firstDay=new Date(y,m,1);
+  const lastDay=new Date(y,m+1,0);
+  const startPad=firstDay.getDay(); // 0=日
+  const cells=[];
+  for(let i=0;i<startPad;i++)cells.push(null);
+  for(let d=1;d<=lastDay.getDate();d++)cells.push(d);
+  const byDate={};
+  _importHolCandidates.forEach(c=>{byDate[c.date]=c;});
+  const grid=document.getElementById('import-hol-cal-grid');
+  grid.innerHTML=cells.map((d,i)=>{
+    if(d===null)return'<div></div>';
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const c=byDate[ds];
+    const col=i%7; // 0=日,6=土
+    let bg='#fff',color=col===0?'#e24b4a':col===6?'#0c447c':'#333',border='1px solid transparent',cursor='default',title='',fw='400';
+    if(c){
+      fw='700';
+      if(c.already){bg='#f1efe8';color='#bbb';title='既に登録済み';}
+      else if(c.past){bg='#f1efe8';color='#ccc';title='過去日のためスキップ';}
+      else if(c.confirmed){bg='#f1efe8';color='#ccc';title='確定済み週のためスキップ';}
+      else if(c.selected){bg='#fcebeb';color='#791f1f';border='1px solid #e24b4a';cursor='pointer';title=c.label||'休校候補（選択中）';}
+      else{bg='#fff';color='#e24b4a';border='1px solid #f0c0c0';cursor='pointer';title=c.label||'休校候補（未選択）';}
+    }
+    const clickable=c&&!c.already&&!c.past&&!c.confirmed;
+    return`<div ${clickable?`onclick="toggleImportHolDay('${ds}')"`:''} title="${title}" style="height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:11px;font-weight:${fw};background:${bg};color:${color};cursor:${cursor};border:${border}">${d}</div>`;
+  }).join('');
+}
+
+function renderImportHolList(){
+  const el=document.getElementById('import-hol-list');
+  const prefix=`${_importHolViewY}-${String(_importHolViewM+1).padStart(2,'0')}`;
+  const monthCands=_importHolCandidates.filter(c=>c.date.startsWith(prefix));
+  if(monthCands.length===0){
+    el.innerHTML='<p style="font-size:11px;color:#888;text-align:center">この月に候補はありません</p>';
+  } else {
+    el.innerHTML=monthCands.map(c=>{
+      const disabled=c.already||c.past||c.confirmed;
+      const note=c.already?'既に登録済み':c.past?'過去日':c.confirmed?'確定済み週':'';
+      return`<label style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;${disabled?'opacity:.45':''}">
+        <input type="checkbox" ${disabled?'disabled':''} ${c.selected?'checked':''} onchange="toggleImportHolDay('${c.date}')">
+        <span style="font-weight:600">${c.date.slice(5)}</span>
+        <span style="color:#888">${c.label}</span>
+        ${note?`<span style="margin-left:auto;font-size:10px;color:#bbb">${note}</span>`:''}
+      </label>`;
+    }).join('');
+  }
+  updateImportHolApplyState();
+}
+
+function updateImportHolApplyState(){
+  const total=_importHolCandidates.filter(c=>c.selected&&!c.already&&!c.past&&!c.confirmed).length;
+  document.getElementById('import-hol-apply').disabled=total===0;
+  const countEl=document.getElementById('import-hol-count');
+  if(countEl)countEl.textContent=`選択中: ${total}件`;
+}
+
+function applyImportHol(){
+  const dates=_importHolCandidates.filter(c=>c.selected&&!c.already&&!c.past&&!c.confirmed).map(c=>c.date);
+  if(dates.length===0)return;
+  let added=0;
+  dates.forEach(ds=>{ if(addHolInternal(ds))added++; });
+  if(added>0){
+    recheckAllMakeups();
+    save();render();renderHolTab();
+  }
+  closeM('import-hol-modal');
+  if(added>0)alert(`${added}件の休校日を登録しました`);
 }
 
 // ===== 週スキップ =====

@@ -11,7 +11,7 @@
 | 公開URL | https://sorairo-nosora.github.io/lres-schedule/ |
 | GitHubリポジトリ | https://github.com/sorairo-nosora/lres-schedule |
 | ファイル構成 | `index.html` 1ファイルのみ（約2,000行） |
-| 現在のバージョン | v63 |
+| 現在のバージョン | v64 |
 | データ保存先 | Firebase Realtime Database（シンガポール）+ localStorage |
 
 ---
@@ -40,6 +40,7 @@ Firebaseのキーに使えない文字が生徒名に含まれると保存エラ
 
 | バージョン | 主な変更内容 |
 |-----------|------------|
+| v64 | 休校・面談タブに「休校日インポート」を追加。Lesson Report Editor（別リポジトリ、lres-lesson-reports-editor）が出力するJSON（`{holidays:[{date,label}]}`）を月表示カレンダーで確認しながら選択し、通常休校（`D.hols`）として一括登録できる。過去日・確定済み週の日付・既に休校登録済みの日付は選択不可（自動スキップ、カレンダー上でもグレー表示）。削除の同期はなし（手動）。2アプリはFirebaseプロジェクトが別（Firestore/Realtime Database）なので自動連携ではなく、手動エクスポート→手動インポート方式 |
 | v63 | 時間割グリッド左端の時刻軸列（38px）を削除。開始・終了時刻は各クラスブロックに表示済み、時間帯は横線で判別可能なため、日付列の横幅を広く使えるように変更 |
 | v62 | 3ヶ月より古い出席記録・振替記録・フラグ・attrLogも自動削除（データ肥大化防止） |
 | v61 | クラス属性（レベル・時間・色・テキスト）の変更を過去週に影響させない（`attrLog` 履歴管理） |
