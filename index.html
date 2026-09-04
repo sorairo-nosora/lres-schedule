@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
+<!-- v69: 生徒の退会・再登録の仕組みを見直し。これまでは生徒ごとに入会日・退会日を1組しか記録できず、退会した生徒を同じクラスに再登録すると「退会済み」の判定が残ったままになり二度と表示されなくなるバグがあった。在籍期間を複数記録できる履歴（periods）方式に変更し、入退会を繰り返しても矛盾しないように修正。あわせて、退会すると過去週の表示からもその生徒が消えてしまっていた問題も修正（在籍期間履歴をもとに、退会前の週は引き続き表示されるように）。また「削除」ボタンに、通常の退会（記録を残す）と、誤って登録してしまった場合向けの完全削除（記録ごと消去）の2つの選択肢を追加。既存データは自動的に新形式へ移行され、これまでの記録に影響はない。v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -306,6 +306,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div style="display:flex;gap:8px">
       <button id="confirm-ok" class="mbtn" style="flex:1;text-align:center;background:#fcebeb;border-color:#f09595;color:#791f1f;font-weight:600">OK</button>
       <button onclick="closeConfirm(false)" class="mbtn" style="flex:1;text-align:center">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="stu-remove-modal" style="display:none">
+  <div class="modal" style="max-width:320px">
+    <div id="stu-remove-msg" style="font-size:14px;line-height:1.6;margin-bottom:14px;white-space:pre-wrap"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button id="stu-remove-leave" class="mbtn" style="text-align:center;background:#fcebeb;border-color:#f09595;color:#791f1f;font-weight:600">退会にする（記録を残す）</button>
+      <button id="stu-remove-hard" class="mbtn" style="text-align:center;background:#fff;border-color:#ccc;color:#a32d2d;font-size:12px">誤って登録したので完全に削除する</button>
+      <button onclick="document.getElementById('stu-remove-modal').style.display='none'" class="mbtn" style="text-align:center">キャンセル</button>
     </div>
   </div>
 </div>
@@ -809,7 +820,7 @@ function render(){
       let chips='';
       // プライベートクラスは週ごとに選択された生徒を取得
       const priName=cls.isPrivate?getPriStudent(cls.id):null;
-      const studentsToShow=cls.isPrivate?(priName?[priName]:[]):cls.students;
+      const studentsToShow=cls.isPrivate?(priName?[priName]:[]):getKnownStudents(cls);
       if(cls.isPrivate&&!priName){
         chips+=`<span style="font-size:9px;color:#aaa;font-style:italic">空き</span>`;
       }
@@ -976,12 +987,32 @@ function navWeek(n){
 }
 
 // 指定日にその生徒がクラスのメンバーとして有効かチェック
+// 旧形式（joinDate/leaveDateを1組だけ持つ）を新形式（periods=在籍期間の履歴の配列）に変換
+function migrateLegacyPeriods(sd){
+  const periods=[];
+  if(sd.joinDate||sd.leaveDate)periods.push({join:sd.joinDate||null,leave:sd.leaveDate||null});
+  return periods;
+}
 function isMemberOn(cls, studentName, dateStr){
   const sd = cls.sd && cls.sd[studentName];
   if(!sd) return true;
+  if(Array.isArray(sd.periods)&&sd.periods.length){
+    // periods: [{join,leave}, ...] 入退会を繰り返してもそれぞれの期間として記録される
+    return sd.periods.some(p=>{
+      if(p.join && dateStr < p.join) return false; // 参加日より前は非表示（参加日当日は表示）
+      if(p.leave && dateStr >= p.leave) return false; // 退会日以降は非表示（退会日当日から非表示）
+      return true;
+    });
+  }
+  // 旧形式との後方互換（periods未設定のデータ）
   if(sd.joinDate && dateStr < sd.joinDate) return false; // 参加日より前は非表示（参加日当日は表示）
   if(sd.leaveDate && dateStr >= sd.leaveDate) return false; // 削除日以降は非表示（削除日当日から非表示）
   return true;
+}
+// このクラスに現在在籍している生徒 + 過去に在籍したことがある生徒（cls.sdに記録がある生徒）の名前一覧。
+// 実際にその日表示するかどうかは isMemberOn() 側の在籍期間判定に委ねる（退会前の過去週でも表示されるように）。
+function getKnownStudents(cls){
+  return [...new Set([...(cls.students||[]),...Object.keys(cls.sd||{})])];
 }
 
 function isOnLeave(cls, studentName, dateStr){
@@ -1101,7 +1132,7 @@ function renderClsWeekModal(){
     document.getElementById('cwm-mk').innerHTML=mkHtml;
     return;
   }
-  const students=cls.students.filter(s=>isMemberOn(cls,s,ds)&&!isOnLeave(cls,s,ds));
+  const students=getKnownStudents(cls).filter(s=>isMemberOn(cls,s,ds)&&!isOnLeave(cls,s,ds));
   const STATUSES=[
     {v:'present', label:'出席',   bg:'#eaf3de', col:'#27500a'},
     {v:'absent',  label:'欠席↺', bg:'#fcebeb', col:'#791f1f'},
@@ -1916,9 +1947,12 @@ function addSt(cid){
     cls.students.push(n);
     if(!cls.sd)cls.sd={};
     if(!cls.sd[n])cls.sd[n]={};
-    // 現在表示中の週でそのクラスの最初の授業日をjoinDateとして設定
+    if(!Array.isArray(cls.sd[n].periods))cls.sd[n].periods=migrateLegacyPeriods(cls.sd[n]);
+    delete cls.sd[n].joinDate;delete cls.sd[n].leaveDate;
+    // 現在表示中の週でそのクラスの最初の授業日を、新しい在籍期間の開始日として記録
+    // （以前このクラスを退会していた生徒の場合は、別の期間として履歴に追加される）
     const classDate=getClassDateInCurrentWeek(cls);
-    if(classDate)cls.sd[n].joinDate=classDate;
+    cls.sd[n].periods.push({join:classDate,leave:null});
   }
   inp.value='';
   save();openCards.add(cid);renderAdmin();render();
@@ -1935,21 +1969,45 @@ function getClassDateInCurrentWeek(cls){
 }
 function promptLeave(cid,n){
   if(isConfirmed())return;
-  customConfirm(`${n}を削除しますか？\n現在表示中の授業日以降、このクラスから非表示になります。\n（過去の出欠記録は残ります）`, ok=>{
-    if(!ok)return;
-    const cls=D.classes.find(c=>c.id===cid);
-    if(!cls)return;
-    if(!cls.sd)cls.sd={};
-    if(!cls.sd[n])cls.sd[n]={};
-    const classDate=getClassDateInCurrentWeek(cls);
-    if(classDate)cls.sd[n].leaveDate=classDate;
-    cls.students=cls.students.filter(s=>s!==n);
-    save();openCards.add(cid);renderAdmin();render();
-  });
+  document.getElementById('stu-remove-msg').textContent=`${n}を削除しますか？`;
+  document.getElementById('stu-remove-leave').onclick=()=>{
+    document.getElementById('stu-remove-modal').style.display='none';
+    customConfirm(`${n}を退会させますか？\n現在表示中の授業日以降、このクラスから非表示になります。\n（過去の出欠記録は残ります。同じクラスに後で再登録することもできます）`, ok=>{
+      if(!ok)return;
+      doLeaveStudent(cid,n);
+    });
+  };
+  document.getElementById('stu-remove-hard').onclick=()=>{
+    document.getElementById('stu-remove-modal').style.display='none';
+    customConfirm(`${n}を完全に削除しますか？\nこのクラスでの在籍記録・成績メモなどが全て消え、元に戻せません。\n※誤って登録してしまった場合のみ使用してください。`, ok=>{
+      if(!ok)return;
+      rmSt(cid,n);
+    });
+  };
+  document.getElementById('stu-remove-modal').style.display='flex';
 }
 
+// 退会処理：在籍期間の履歴の中で「まだ退会日が設定されていない期間」に退会日を記録する。
+// cls.sd（成績・メモ等）は消さないので、後で再登録すれば新しい在籍期間として履歴に積み上がる。
+function doLeaveStudent(cid,n){
+  const cls=D.classes.find(c=>c.id===cid);
+  if(!cls)return;
+  if(!cls.sd)cls.sd={};
+  if(!cls.sd[n])cls.sd[n]={};
+  if(!Array.isArray(cls.sd[n].periods))cls.sd[n].periods=migrateLegacyPeriods(cls.sd[n]);
+  delete cls.sd[n].joinDate;delete cls.sd[n].leaveDate;
+  if(cls.sd[n].periods.length===0)cls.sd[n].periods.push({join:null,leave:null});
+  const classDate=getClassDateInCurrentWeek(cls);
+  const openPeriod=[...cls.sd[n].periods].reverse().find(p=>!p.leave);
+  if(openPeriod&&classDate)openPeriod.leave=classDate;
+  cls.students=cls.students.filter(s=>s!==n);
+  save();openCards.add(cid);renderAdmin();render();
+}
+
+// 完全削除：誤って登録してしまった場合用。在籍記録ごとこのクラスから消去する（復元不可）。
 function rmSt(cid,n){
   const cls=D.classes.find(c=>c.id===cid);
+  if(!cls)return;
   cls.students=cls.students.filter(s=>s!==n);
   if(cls.sd)delete cls.sd[n];
   save();openCards.add(cid);renderAdmin();render();
