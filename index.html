@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
+<!-- v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -749,19 +749,34 @@ function render(){
     const skippedCls=allDayCls.filter(c=>isWeekSkipped(c.id));
     // スキップされていないクラスのみ通常描画
     const dayCls=allDayCls.filter(c=>!isWeekSkipped(c.id));
+    const daySpots=(D.spots||[]).filter(sp=>sp.date===ds);
     const isMob=window.innerWidth<=600;
 
-    // ===== 列割り当てアルゴリズム（時間被り対応）=====
-    const colAssign=[];
+    // ===== 列割り当てアルゴリズム（時間被り対応・スポット授業も対象に含める）=====
+    const colMap={};
     const colEnd=[];
-    dayCls.forEach(cls=>{
-      const s=pt(getClsAttr(cls,ds,'start')),e=pt(getClsAttr(cls,ds,'end'));
-      let col=colEnd.findIndex(ce=>ce<=s);
-      if(col===-1){col=colEnd.length;colEnd.push(0);}
-      colEnd[col]=e;
-      colAssign.push({id:cls.id,col});
-    });
+    [...dayCls.map(c=>({key:'cls:'+c.id,start:pt(getClsAttr(c,ds,'start')),end:pt(getClsAttr(c,ds,'end'))})),
+     ...daySpots.map(sp=>({key:'spot:'+sp.id,start:pt(sp.start),end:pt(sp.end)}))]
+      .sort((a,b)=>a.start-b.start)
+      .forEach(it=>{
+        let col=colEnd.findIndex(ce=>ce<=it.start);
+        if(col===-1){col=colEnd.length;colEnd.push(0);}
+        colEnd[col]=it.end;
+        colMap[it.key]=col;
+      });
     const totalCols=colEnd.length||1;
+    // 列幅: 2列の場合は左2/3・右1/3。3列以上は等分
+    const colWidths=totalCols===2?[66.666,33.333]:[...Array(totalCols)].map(()=>100/totalCols);
+    const multiCol=totalCols>1;
+    function colStyle(col){
+      const leftPct=colWidths.slice(0,col).reduce((a,b)=>a+b,0);
+      const colW=colWidths[col];
+      // 列ごとに left/right をパーセント指定。端列は2pxの余白
+      return {
+        leftStyle: col===0?'left:2px':`left:calc(${leftPct}% + 1px)`,
+        rightStyle: col===totalCols-1?'right:2px':`right:calc(${100-(leftPct+colW)}% + 1px)`
+      };
+    }
 
     g+=`<div style="flex:1;border-right:1px solid #e0ddd5;position:relative;height:${GH}px;${(hol||tempHol)?'background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(100,50,150,.04) 8px,rgba(100,50,150,.04) 16px)':''}">`;
     for(let t=GS;t<=GE;t+=60)g+=`<div style="position:absolute;top:${(t-GS)*PPM}px;left:0;right:0;border-top:1px solid #f0ede5;pointer-events:none"></div>`;
@@ -772,16 +787,9 @@ function render(){
       const top=(pt(effStart)-GS)*PPM;
       const h=(pt(effEnd)-pt(effStart))*PPM;
       const mks=getMKfor(cls.id,ds);
-      const {col}=colAssign[ci];
-      // 列幅: 2列の場合は左2/3・右1/3。3列以上は等分
-      const colWidths=totalCols===2?[66.666,33.333]:[...Array(totalCols)].map(()=>100/totalCols);
-      const leftPct=colWidths.slice(0,col).reduce((a,b)=>a+b,0);
-      const colW=colWidths[col];
-      // 列ごとに left/right をパーセント指定。端列は2pxの余白
-      const leftStyle=col===0?'left:2px':`left:calc(${leftPct}% + 1px)`;
-      const rightStyle=col===totalCols-1?'right:2px':`right:calc(${100-(leftPct+colW)}% + 1px)`;
+      const col=colMap['cls:'+cls.id];
+      const {leftStyle,rightStyle}=colStyle(col);
       // 複数列時はチップを小さくして収まりやすく
-      const multiCol=totalCols>1;
       const blkPad=isMob||multiCol?'2px 3px':'3px 5px';
       const chipFontSize=multiCol?'9':(isMob?'8':'12');
       const chipPad=multiCol?'3':(isMob?'2':'5');
@@ -849,7 +857,6 @@ function render(){
     });
 
     // スキップされたクラスのゴースト表示
-    const daySpots=(D.spots||[]).filter(sp=>sp.date===ds);
     skippedCls.forEach(cls=>{
       const sk=getClsAttr(cls,ds,'start'),ek=getClsAttr(cls,ds,'end');
       const top=(pt(sk)-GS)*PPM;
@@ -860,14 +867,17 @@ function render(){
       g+=`<div style="position:absolute;top:${top}px;height:${h}px;left:2px;right:2px;border-radius:6px;background:rgba(200,200,200,0.08);z-index:2;display:flex;align-items:center;justify-content:center">${btn}</div>`;
     });
 
-    // スポット授業
-    (D.spots||[]).filter(sp=>sp.date===ds).forEach(sp=>{
+    // スポット授業（通常クラスと時間が被る場合は同じ列割り当てロジックで空いている列に収める）
+    daySpots.forEach(sp=>{
       const stop=(pt(sp.start)-GS)*PPM;
       const sh=(pt(sp.end)-pt(sp.start))*PPM;
       const sec=sp.id.replace(/'/g,"\'");
-      g+=`<div class="spot-blk" style="top:${stop}px;height:${sh}px;left:2px;right:2px;background:#fff;border:1.5px solid #e07b20;padding:3px 5px" onclick="rmSpotConfirm('${sec}')">
+      const spCol=colMap['spot:'+sp.id];
+      const {leftStyle:spLeft,rightStyle:spRight}=colStyle(spCol);
+      const spSmall=isMob||multiCol;
+      g+=`<div class="spot-blk" style="top:${stop}px;height:${sh}px;${spLeft};${spRight};background:#fff;border:1.5px solid #e07b20;padding:${spSmall?'2px 3px':'3px 5px'}" onclick="rmSpotConfirm('${sec}')">
         <div style="font-size:8px;color:#b06010;opacity:.8;margin-bottom:2px">${sp.start}–${sp.end} <span style="background:rgba(224,123,32,.15);border-radius:3px;padding:0 3px">SPOT</span></div>
-        <div style="display:flex;flex-wrap:wrap">${(sp.students||'').split(/[、,，\s]+/).filter(Boolean).map(n=>`<span class="chip" style="background:#fff7f0;color:#7a3a00;border-color:#e07b20;font-size:${isMob?'8':'12'}px;padding:0 ${isMob?'2':'5'}px;line-height:1.05;margin:0 1px 1px 0;border-radius:${isMob?'4':'12'}px">${n}</span>`).join('')}</div>
+        <div style="display:flex;flex-wrap:wrap">${(sp.students||'').split(/[、,，\s]+/).filter(Boolean).map(n=>`<span class="chip" style="background:#fff7f0;color:#7a3a00;border-color:#e07b20;font-size:${spSmall?'8':'12'}px;padding:0 ${spSmall?'2':'5'}px;line-height:1.05;margin:0 1px 1px 0;border-radius:${spSmall?'4':'12'}px">${n}</span>`).join('')}</div>
       </div>`;
     });
 
