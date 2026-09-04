@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
+<!-- v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -752,19 +752,30 @@ function render(){
     const daySpots=(D.spots||[]).filter(sp=>sp.date===ds);
     const isMob=window.innerWidth<=600;
 
-    // ===== 列割り当てアルゴリズム（時間被り対応・スポット授業も対象に含める）=====
+    // ===== 列割り当てアルゴリズム（時間被り対応）=====
+    // 通常クラスの列は元のロジックのまま（開始時刻順）で決定し、スポット授業によって
+    // 左右の並びが変わらないようにする
     const colMap={};
     const colEnd=[];
-    [...dayCls.map(c=>({key:'cls:'+c.id,start:pt(getClsAttr(c,ds,'start')),end:pt(getClsAttr(c,ds,'end'))})),
-     ...daySpots.map(sp=>({key:'spot:'+sp.id,start:pt(sp.start),end:pt(sp.end)}))]
-      .sort((a,b)=>a.start-b.start)
-      .forEach(it=>{
-        let col=colEnd.findIndex(ce=>ce<=it.start);
-        if(col===-1){col=colEnd.length;colEnd.push(0);}
-        colEnd[col]=it.end;
-        colMap[it.key]=col;
-      });
-    const totalCols=colEnd.length||1;
+    dayCls.forEach(cls=>{
+      const s=pt(getClsAttr(cls,ds,'start')),e=pt(getClsAttr(cls,ds,'end'));
+      let col=colEnd.findIndex(ce=>ce<=s);
+      if(col===-1){col=colEnd.length;colEnd.push(0);}
+      colEnd[col]=e;
+      colMap['cls:'+cls.id]=col;
+    });
+    let totalCols=colEnd.length||1;
+    // スポット授業は通常クラスの列配置を変えず、実際に時間が重なる列だけを避けて
+    // 空いている列（なければ新しい列）に割り当てる
+    const busyIvs=dayCls.map(cls=>({col:colMap['cls:'+cls.id],start:pt(getClsAttr(cls,ds,'start')),end:pt(getClsAttr(cls,ds,'end'))}));
+    daySpots.slice().sort((a,b)=>pt(a.start)-pt(b.start)).forEach(sp=>{
+      const s=pt(sp.start),e=pt(sp.end);
+      let col=0;
+      while(busyIvs.some(iv=>iv.col===col&&iv.start<e&&iv.end>s))col++;
+      colMap['spot:'+sp.id]=col;
+      busyIvs.push({col,start:s,end:e});
+      if(col+1>totalCols)totalCols=col+1;
+    });
     // 列幅: 2列の場合は左2/3・右1/3。3列以上は等分
     const colWidths=totalCols===2?[66.666,33.333]:[...Array(totalCols)].map(()=>100/totalCols);
     const multiCol=totalCols>1;
