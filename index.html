@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v74: 生徒数の多いクラスがスマホ（狭い画面幅）で列分割されると、生徒名チップが何行にも折り返して枠のほとんどを占め、チップ部分をタップすると出欠モーダルが開かない（ブロック上端のラベル行だけ反応する）バグを修正。openClsWeek()にe.target.classList.contains('chip')の判定でチップ上のクリックを無視するガードがあったが、チップ自体に元々クリック処理は無く単に無反応にしていただけだったため、このガードを削除。v73: スキップしたクラスのゴースト表示（休止中の枠+「解除」ボタン）が、v72で修正した面談ブロックと同じ原因（その日の列を無視した全幅描画・かつクラスブロックと同じz-index:2でHTML上で後に描画されるため優先される）で、時間帯が重なる他のクラスブロックのクリックを奪っていたバグを修正。ゴースト自体には元々クリック処理がなく「↩ 解除」ボタンだけが機能するため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「解除」ボタンだけpointer-events:autoで維持。v72: 面談ブロック(.iv-block)が、その日の列（左右の枠）を無視して常に全幅・かつクラスブロック(z-index:2)より上のz-index:5で描画されていたため、面談と時間帯が重なるクラスブロックの一部がクリックできなくなる（マウスカーソルも矢印のままになる）バグを修正。面談ブロック自体には元々クリック処理がなく削除用の「×」だけが機能していたため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「×」だけpointer-events:autoで維持。v71: 週別クラス詳細モーダルの「備考」ボタン(📝)を押しても入力欄が開かないバグを修正。toggleCwmNote()がDOM階層を1段浅く辿っており、常に対象要素が見つからず無反応になっていた（btn.closest('div').nextElementSibling → btn.closest('div').parentElement.nextElementSibling）。v70: 時間割ブロックの「skip」ボタン（この週だけ非表示）が、スマホ・タブレットではタップしただけで（疑似ホバーにより）右上に出てしまい、出欠・遅刻の記録モーダルへのアクセスを妨げていたのを修正。CSSに@media (hover:hover) and (pointer:fine)を追加し、実際にマウスでホバーできる環境（PC）でのみ表示されるように変更。タッチ端末では従来通り長押し(600ms)でのスキップ操作を使う。v69: 生徒の退会・再登録の仕組みを見直し。これまでは生徒ごとに入会日・退会日を1組しか記録できず、退会した生徒を同じクラスに再登録すると「退会済み」の判定が残ったままになり二度と表示されなくなるバグがあった。在籍期間を複数記録できる履歴（periods）方式に変更し、入退会を繰り返しても矛盾しないように修正。あわせて、退会すると過去週の表示からもその生徒が消えてしまっていた問題も修正（在籍期間履歴をもとに、退会前の週は引き続き表示されるように）。また「削除」ボタンに、通常の退会（記録を残す）と、誤って登録してしまった場合向けの完全削除（記録ごと消去）の2つの選択肢を追加。既存データは自動的に新形式へ移行され、これまでの記録に影響はない。v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
+<!-- v75: 変則スケジュール（休校日イベント）機能を追加。休校・臨時休校に設定した日にのみ、通常クラスとは完全に独立した「イベント枠」を1日単位で作成できるようにした。空いている時間帯をタップすると開始・終了時刻とタイトルを指定して枠を作成でき、時間が重なる枠は通常クラスと同じロジックで自動的に列分割される（3件目のE4/5クラスのように）。各枠には全生徒（在籍中の全クラスの生徒）から自由に参加者を追加でき、加えて自由入力で「見込み客」「過去の生徒」などのラベルも追加可能（一度入力したラベルは候補として次回以降も再利用できる）。参加者ごとに通常クラスと同じ出席・欠席・遅刻の記録ができる。出欠を取ったあとで移動の希望が出た場合は、枠内の生徒名チップを別のイベント枠（日をまたいでもOK）へドラッグ&ドロップするだけで移動できる（HTML5標準のドラッグ&ドロップはiOS Safari/Chromeのタッチでは動作しないため、Pointer Eventsで自前実装）。休校指定を後から解除しても、作成済みのイベント枠は表示・編集・削除ができるように残る（新規作成のみ休校日に制限）。v74: 生徒数の多いクラスがスマホ（狭い画面幅）で列分割されると、生徒名チップが何行にも折り返して枠のほとんどを占め、チップ部分をタップすると出欠モーダルが開かない（ブロック上端のラベル行だけ反応する）バグを修正。openClsWeek()にe.target.classList.contains('chip')の判定でチップ上のクリックを無視するガードがあったが、チップ自体に元々クリック処理は無く単に無反応にしていただけだったため、このガードを削除。v73: スキップしたクラスのゴースト表示（休止中の枠+「解除」ボタン）が、v72で修正した面談ブロックと同じ原因（その日の列を無視した全幅描画・かつクラスブロックと同じz-index:2でHTML上で後に描画されるため優先される）で、時間帯が重なる他のクラスブロックのクリックを奪っていたバグを修正。ゴースト自体には元々クリック処理がなく「↩ 解除」ボタンだけが機能するため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「解除」ボタンだけpointer-events:autoで維持。v72: 面談ブロック(.iv-block)が、その日の列（左右の枠）を無視して常に全幅・かつクラスブロック(z-index:2)より上のz-index:5で描画されていたため、面談と時間帯が重なるクラスブロックの一部がクリックできなくなる（マウスカーソルも矢印のままになる）バグを修正。面談ブロック自体には元々クリック処理がなく削除用の「×」だけが機能していたため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「×」だけpointer-events:autoで維持。v71: 週別クラス詳細モーダルの「備考」ボタン(📝)を押しても入力欄が開かないバグを修正。toggleCwmNote()がDOM階層を1段浅く辿っており、常に対象要素が見つからず無反応になっていた（btn.closest('div').nextElementSibling → btn.closest('div').parentElement.nextElementSibling）。v70: 時間割ブロックの「skip」ボタン（この週だけ非表示）が、スマホ・タブレットではタップしただけで（疑似ホバーにより）右上に出てしまい、出欠・遅刻の記録モーダルへのアクセスを妨げていたのを修正。CSSに@media (hover:hover) and (pointer:fine)を追加し、実際にマウスでホバーできる環境（PC）でのみ表示されるように変更。タッチ端末では従来通り長押し(600ms)でのスキップ操作を使う。v69: 生徒の退会・再登録の仕組みを見直し。これまでは生徒ごとに入会日・退会日を1組しか記録できず、退会した生徒を同じクラスに再登録すると「退会済み」の判定が残ったままになり二度と表示されなくなるバグがあった。在籍期間を複数記録できる履歴（periods）方式に変更し、入退会を繰り返しても矛盾しないように修正。あわせて、退会すると過去週の表示からもその生徒が消えてしまっていた問題も修正（在籍期間履歴をもとに、退会前の週は引き続き表示されるように）。また「削除」ボタンに、通常の退会（記録を残す）と、誤って登録してしまった場合向けの完全削除（記録ごと消去）の2つの選択肢を追加。既存データは自動的に新形式へ移行され、これまでの記録に影響はない。v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,6 +66,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   .cls-blk:hover .skip-btn{display:block}
 }
 .spot-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:6;touch-action:manipulation}
+.evt-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:2;touch-action:manipulation;box-shadow:inset 0 0 0 1.5px #1c8a7a}
+.evt-blk.drag-over{box-shadow:inset 0 0 0 2.5px #0d5f52;background:#dcf3ee!important}
+.chip-evt{display:inline-block;padding:1px 5px;border-radius:12px;font-size:12px;font-weight:600;margin:0 1px 1px 0;cursor:grab;border:1px solid #1c8a7a;background:#e3f5f1;color:#0d5f52;white-space:normal;word-break:break-all;line-height:1.15;overflow:hidden;max-width:100%}
+.chip-evt.absent{text-decoration:line-through;opacity:0.5}
+.chip-evt.late{border-style:solid!important;border-width:2px}
 .tag{padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block}
 /* ===== Firebase連携UI ===== */
 #fb-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid transparent;transition:all .3s;white-space:nowrap;cursor:pointer}
@@ -116,6 +121,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   /* チップ: スマホは6名分入るよう小さく */
   .chip{font-size:8px;padding:0 2px;line-height:1.05;margin:0 1px 1px 0;border-radius:6px}
   .chip-mk{font-size:8px;padding:0 2px;line-height:1.05;margin:0 1px 1px 0;border-radius:6px}
+  .chip-evt{font-size:8px;padding:0 2px;line-height:1.05;margin:0 1px 1px 0;border-radius:6px}
 }
 @media print{
   @page{size:A4 portrait;margin:8mm 8mm 6mm 12mm}
@@ -337,6 +343,55 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div id="cwm-students" style="margin-top:8px"></div>
     <div id="cwm-mk"></div>
     <div class="mcancel" onclick="closeM('cls-week-modal')">閉じる</div>
+  </div>
+</div>
+
+<!-- 変則スケジュール（休校日イベント）: 新規セッション作成 -->
+<div class="overlay" id="evt-create-modal" style="display:none" onclick="if(event.target===this)closeM('evt-create-modal')">
+  <div class="modal">
+    <h3>🎪 イベント枠を追加</h3>
+    <div class="msub" id="evt-create-date-label"></div>
+    <div style="margin:12px 0;display:flex;flex-direction:column;gap:8px">
+      <div class="fr"><label>開始</label><input type="time" id="evt-create-start" step="300" min="09:00" max="22:00"></div>
+      <div class="fr"><label>終了</label><input type="time" id="evt-create-end" step="300" min="09:00" max="22:00"></div>
+      <div class="fr"><label>タイトル</label><input type="text" id="evt-create-title" placeholder="例: 文化祭イベント（空欄可）"></div>
+    </div>
+    <button class="btn btn-p" onclick="createEvtSession()" style="width:100%;margin-bottom:8px">作成</button>
+    <div class="mcancel" onclick="closeM('evt-create-modal')">キャンセル</div>
+  </div>
+</div>
+
+<!-- 変則スケジュール（休校日イベント）: セッション編集・出欠 -->
+<div class="overlay" id="evt-modal" style="display:none" onclick="if(event.target===this)closeM('evt-modal')">
+  <div class="modal" style="max-width:380px">
+    <h3 style="color:#0d5f52">🎪 イベント枠</h3>
+    <div class="msub" id="evt-date-label"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:6px">
+      <div class="fr"><label>タイトル</label><input type="text" id="evt-title-input" placeholder="例: 文化祭イベント" onchange="updateEvtField('title',this.value)" style="flex:1"></div>
+      <div class="fr"><label>開始</label><input type="time" id="evt-start-input" step="300" min="09:00" max="22:00" onchange="updateEvtField('start',this.value)"><label>終了</label><input type="time" id="evt-end-input" step="300" min="09:00" max="22:00" onchange="updateEvtField('end',this.value)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:2px">
+      <div style="font-size:11px;color:#888;font-weight:600">参加者</div>
+      <button onclick="openEvtAddStudent()" style="font-size:11px;padding:3px 9px;border:1px solid #1c8a7a;border-radius:6px;background:#e3f5f1;color:#0d5f52;cursor:pointer">＋生徒を追加</button>
+    </div>
+    <div id="evt-students" style="margin-top:4px"></div>
+    <p style="font-size:10px;color:#aaa;margin-top:8px">💡 参加者の名前チップは、他のイベント枠（別日でも可）へドラッグ&ドロップで移動できます</p>
+    <button onclick="deleteEvtSession()" style="width:100%;margin-top:10px;font-size:12px;padding:7px;border:1px solid #f09595;border-radius:8px;background:#fff;color:#a32d2d;cursor:pointer">🗑 このイベント枠を削除</button>
+    <div class="mcancel" onclick="closeM('evt-modal')">閉じる</div>
+  </div>
+</div>
+
+<!-- 変則スケジュール（休校日イベント）: 参加者追加 -->
+<div class="overlay" id="evt-add-modal" style="display:none" onclick="if(event.target===this)closeM('evt-add-modal')">
+  <div class="modal">
+    <h3 style="color:#0d5f52">生徒を追加</h3>
+    <input type="text" id="evt-add-search" placeholder="名前で検索" oninput="renderEvtAddList()" style="width:100%;padding:6px 9px;border:1px solid #ccc;border-radius:8px;font-size:13px;margin:8px 0">
+    <div id="evt-add-list" style="max-height:260px;overflow-y:auto"></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <input type="text" id="evt-add-freeform" placeholder="見込み客・過去の生徒などを自由入力" style="flex:1;padding:6px 9px;border:1px solid #ccc;border-radius:8px;font-size:13px">
+      <button class="btn btn-p" onclick="addEvtCustomLabel()">追加</button>
+    </div>
+    <div class="mcancel" onclick="closeM('evt-add-modal')">閉じる</div>
   </div>
 </div>
 
@@ -805,6 +860,29 @@ function render(){
       };
     }
 
+    // ===== 変則スケジュール（休校日イベント）の列割り当て（通常クラスとは独立） =====
+    const daySessions=evtSessionsFor(ds);
+    const evtColMap={};
+    const evtColEnd=[];
+    daySessions.forEach(s=>{
+      const st=pt(s.start),en=pt(s.end);
+      let col=evtColEnd.findIndex(ce=>ce<=st);
+      if(col===-1){col=evtColEnd.length;evtColEnd.push(0);}
+      evtColEnd[col]=en;
+      evtColMap[s.id]=col;
+    });
+    const evtTotalCols=evtColEnd.length||1;
+    const evtColWidths=evtTotalCols===2?[66.666,33.333]:[...Array(evtTotalCols)].map(()=>100/evtTotalCols);
+    const evtMultiCol=evtTotalCols>1;
+    function evtColStyle(col){
+      const leftPct=evtColWidths.slice(0,col).reduce((a,b)=>a+b,0);
+      const colW=evtColWidths[col];
+      return {
+        leftStyle: col===0?'left:2px':`left:calc(${leftPct}% + 1px)`,
+        rightStyle: col===evtTotalCols-1?'right:2px':`right:calc(${100-(leftPct+colW)}% + 1px)`
+      };
+    }
+
     g+=`<div style="flex:1;border-right:1px solid #e0ddd5;position:relative;height:${GH}px;${(hol||tempHol)?'background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(100,50,150,.04) 8px,rgba(100,50,150,.04) 16px)':''}">`;
     for(let t=GS;t<=GE;t+=60)g+=`<div style="position:absolute;top:${(t-GS)*PPM}px;left:0;right:0;border-top:1px solid #f0ede5;pointer-events:none"></div>`;
 
@@ -911,6 +989,43 @@ function render(){
     // 空エリアタップ → スポット授業追加
     if(!isConfirmed()&&!hol&&!tempHol){
       g+=`<div style="position:absolute;inset:0;z-index:1" onclick="openSpotModal('${ds}',event)"></div>`;
+    }
+
+    // 変則スケジュール（休校日イベント）: セッションの描画
+    daySessions.forEach(s=>{
+      const top3=(pt(s.start)-GS)*PPM;
+      const h3=(pt(s.end)-pt(s.start))*PPM;
+      const col=evtColMap[s.id];
+      const {leftStyle:evtLeft,rightStyle:evtRight}=evtColStyle(col);
+      const blkPad3=isMob||evtMultiCol?'2px 3px':'3px 5px';
+      const chipFontSize3=evtMultiCol?'9':(isMob?'8':'12');
+      const chipPad3=evtMultiCol?'3':(isMob?'2':'5');
+      const labelFontSize3=isMob||evtMultiCol?'8':'9';
+      const esid=s.id.replace(/'/g,"\'");
+      let evtChips='';
+      (s.students||[]).forEach(n=>{
+        const att=getEvtAtt(s.id,n);
+        let extra='';
+        if(att==='absent'||att==='absent-no-sub')extra=' absent';else if(att==='late')extra=' late';
+        const en=n.replace(/'/g,"\'");
+        evtChips+=`<span class="chip-evt${extra}" style="font-size:${chipFontSize3}px;padding:0 ${chipPad3}px;line-height:1.05;margin:0 1px 1px 0;border-radius:${isMob||evtMultiCol?'4':'12'}px;touch-action:none" onpointerdown="evtChipPointerDown(event,'${esid}','${en}')" onpointermove="evtChipPointerMove(event)" onpointerup="evtChipPointerUp(event)" onpointercancel="evtChipPointerCancel(event)">${n}</span>`;
+      });
+      const evtTitle=(s.title||'イベント').replace(/</g,'&lt;');
+      g+=`<div class="evt-blk" data-sid="${esid}" style="top:${top3}px;height:${h3}px;${evtLeft};${evtRight};background:#f0faf8" onclick="openEvtEditor('${esid}')"><div style="padding:${blkPad3};height:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between">
+          <div>
+            <div style="display:flex;justify-content:space-between;gap:4px;margin-bottom:1px">
+              <span style="font-size:${labelFontSize3}px;opacity:.65;white-space:nowrap;flex-shrink:0">${s.start}</span>
+              <span style="font-size:${labelFontSize3}px;font-weight:600;color:#0d5f52;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${evtTitle}</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap">${evtChips}</div>
+          </div>
+          <div style="text-align:right;font-size:${labelFontSize3}px;opacity:.5;white-space:nowrap;line-height:1">${s.end}</div>
+        </div>
+      </div>`;
+    });
+    // 空エリアタップ → イベント枠追加（休校・臨時休校の日のみ）
+    if(!isConfirmed()&&(hol||tempHol)){
+      g+=`<div style="position:absolute;inset:0;z-index:1" onclick="openEvtCreateModal('${ds}',event)"></div>`;
     }
 
     (D.interviews||[]).filter(iv=>iv.date===ds).forEach(iv=>{
@@ -1691,6 +1806,242 @@ function rmSpotConfirm(id){
   });
 }
 
+// ===== 変則スケジュール（休校日イベント）=====
+// 通常クラスとは完全に独立した時間枠。休校・臨時休校の日にのみ新規追加でき、
+// 生徒は全生徒（在籍生徒＋自由入力の見込み客・過去の生徒ラベル）から自由に選べる。
+function evtRoster(){
+  const set=new Set();
+  D.classes.forEach(c=>getKnownStudents(c).forEach(s=>set.add(s)));
+  return [...set].sort((a,b)=>a.localeCompare(b,'ja'));
+}
+function evtSessionsFor(ds){return (D.evtSessions||[]).filter(s=>s.date===ds).sort((a,b)=>pt(a.start)-pt(b.start));}
+function getEvtAtt(sid,n){const s=(D.evtSessions||[]).find(x=>x.id===sid);return (s&&s.att&&s.att[n])||'present';}
+function setEvtAtt(sid,n,v){const s=(D.evtSessions||[]).find(x=>x.id===sid);if(!s)return;if(!s.att)s.att={};s.att[n]=v;}
+function m2t(m){m=Math.max(GS,Math.min(m,GE));return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
+
+let _evtDate=null;
+function openEvtCreateModal(ds,e){
+  if(isConfirmed())return;
+  if(e&&e.target&&e.target.closest('.evt-blk'))return;
+  _evtDate=ds;
+  document.getElementById('evt-create-date-label').textContent=ds;
+  const col=e&&e.currentTarget;
+  let startMin=GS,endMin=Math.min(GS+60,GE);
+  if(col&&e){
+    const rect=col.getBoundingClientRect();
+    const y=e.clientY-rect.top;
+    startMin=Math.round((y/PPM+GS)/15)*15;
+    startMin=Math.max(GS,Math.min(startMin,GE-30));
+    endMin=Math.min(startMin+60,GE);
+  }
+  document.getElementById('evt-create-start').value=m2t(startMin);
+  document.getElementById('evt-create-end').value=m2t(endMin);
+  document.getElementById('evt-create-title').value='';
+  document.getElementById('evt-create-modal').style.display='flex';
+}
+function createEvtSession(){
+  const startRaw=document.getElementById('evt-create-start').value;
+  const endRaw=document.getElementById('evt-create-end').value;
+  const title=document.getElementById('evt-create-title').value.trim();
+  if(!startRaw||!endRaw)return;
+  const start=m2t(pt(startRaw)),end=m2t(pt(endRaw));
+  if(pt(end)<=pt(start))return;
+  const id='evt-'+Date.now();
+  if(!D.evtSessions)D.evtSessions=[];
+  D.evtSessions.push({id,date:_evtDate,start,end,title,students:[],att:{}});
+  save();closeM('evt-create-modal');render();
+  openEvtEditor(id);
+}
+
+let _evtModalSid=null;
+function openEvtEditor(sid){
+  if(isConfirmed())return;
+  _evtModalSid=sid;
+  renderEvtModal();
+  document.getElementById('evt-modal').style.display='flex';
+}
+function renderEvtModal(){
+  const s=(D.evtSessions||[]).find(x=>x.id===_evtModalSid);
+  if(!s){closeM('evt-modal');return;}
+  const d=new Date(s.date+'T00:00:00');
+  const dow=d.getDay()===0?7:d.getDay();
+  document.getElementById('evt-title-input').value=s.title||'';
+  document.getElementById('evt-date-label').textContent=`${DJ[dow]}曜 ${s.date}`;
+  document.getElementById('evt-start-input').value=s.start;
+  document.getElementById('evt-end-input').value=s.end;
+  const STATUSES=[
+    {v:'present', label:'出席',   bg:'#eaf3de', col:'#27500a'},
+    {v:'absent',  label:'欠席',   bg:'#fcebeb', col:'#791f1f'},
+    {v:'absent-no-sub', label:'欠席✗', bg:'#f1efe8', col:'#444'},
+    {v:'late',    label:'遅刻',   bg:'#faeeda', col:'#633806'},
+  ];
+  const students=s.students||[];
+  let html='';
+  if(students.length===0)html='<p style="font-size:12px;color:#888;padding:8px 0">まだ生徒がいません。「＋生徒を追加」から追加してください</p>';
+  students.forEach(n=>{
+    const att=getEvtAtt(s.id,n);
+    const en=n.replace(/'/g,"\\'"),esid=s.id.replace(/'/g,"\\'");
+    const btns=STATUSES.map(st=>{
+      const sel=att===st.v;
+      const bs=sel?`background:${st.bg};color:${st.col};border-color:${st.col};font-weight:600`:'background:#fff;color:#aaa;border-color:#e0ddd5';
+      return`<button onclick="setEvtAttUI('${esid}','${en}','${st.v}')" style="font-size:10px;padding:2px 5px;border-radius:6px;border:1px solid;cursor:pointer;white-space:nowrap;${bs}">${st.label}</button>`;
+    }).join('');
+    html+=`<div style="display:flex;align-items:center;gap:4px;padding:7px 0;border-bottom:1px solid #f0ede5">
+      <span style="font-size:13px;font-weight:600;min-width:50px;flex-shrink:0">${n}</span>
+      <div style="display:flex;gap:2px;flex:1;flex-wrap:wrap">${btns}</div>
+      <button onclick="rmEvtStudent('${esid}','${en}')" style="font-size:13px;padding:1px 6px;border-radius:6px;border:1px solid #e0ddd5;background:#fff;color:#aaa;cursor:pointer;flex-shrink:0" title="外す">×</button>
+    </div>`;
+  });
+  document.getElementById('evt-students').innerHTML=html;
+}
+function setEvtAttUI(sid,n,v){setEvtAtt(sid,n,v);save();render();renderEvtModal();}
+function rmEvtStudent(sid,n){
+  const s=(D.evtSessions||[]).find(x=>x.id===sid);if(!s)return;
+  s.students=(s.students||[]).filter(x=>x!==n);
+  if(s.att)delete s.att[n];
+  save();render();renderEvtModal();
+}
+function updateEvtField(field,val){
+  const s=(D.evtSessions||[]).find(x=>x.id===_evtModalSid);if(!s)return;
+  if(field==='title'){s.title=val.trim();save();render();return;}
+  if(!val)return;
+  const mins=Math.max(GS,Math.min(pt(val),GE));
+  const hhmm=m2t(mins);
+  if(field==='start'){
+    s.start=hhmm;
+    if(pt(s.end)<=pt(s.start))s.end=m2t(Math.min(mins+30,GE));
+  } else {
+    s.end=hhmm;
+    if(pt(s.end)<=pt(s.start))s.start=m2t(Math.max(mins-30,GS));
+  }
+  save();render();renderEvtModal();
+}
+function deleteEvtSession(){
+  const sid=_evtModalSid;
+  customConfirm('このイベント枠を削除しますか？（記録した出欠も消えます）',ok=>{
+    if(!ok)return;
+    D.evtSessions=(D.evtSessions||[]).filter(x=>x.id!==sid);
+    save();closeM('evt-modal');render();
+  });
+}
+
+// 参加者追加（在籍生徒からの選択 ＋ 自由入力ラベル）
+function openEvtAddStudent(){
+  document.getElementById('evt-add-search').value='';
+  document.getElementById('evt-add-freeform').value='';
+  renderEvtAddList();
+  document.getElementById('evt-add-modal').style.display='flex';
+}
+function renderEvtAddList(){
+  const s=(D.evtSessions||[]).find(x=>x.id===_evtModalSid);if(!s)return;
+  const q=(document.getElementById('evt-add-search').value||'').trim();
+  const already=new Set(s.students||[]);
+  const roster=evtRoster().filter(n=>!already.has(n)&&(!q||n.includes(q)));
+  const customs=(D.evtCustomLabels||[]).filter(n=>!already.has(n)&&(!q||n.includes(q)));
+  let html='';
+  if(roster.length){
+    html+='<div style="font-size:11px;color:#888;margin:8px 0 4px;font-weight:600">在籍生徒</div><div style="display:flex;flex-wrap:wrap;gap:5px">';
+    roster.forEach(n=>{
+      const en=n.replace(/'/g,"\\'");
+      html+=`<span class="chip" style="background:#eaf3de;color:#27500a;cursor:pointer" onclick="pickEvtStudent('${en}')">${n}</span>`;
+    });
+    html+='</div>';
+  }
+  if(customs.length){
+    html+='<div style="font-size:11px;color:#888;margin:12px 0 4px;font-weight:600">見込み客・過去の生徒など</div><div style="display:flex;flex-wrap:wrap;gap:5px">';
+    customs.forEach(n=>{
+      const en=n.replace(/'/g,"\\'");
+      html+=`<span class="chip" style="background:#eeedfe;color:#3a2d6e;cursor:pointer" onclick="pickEvtStudent('${en}')">${n}</span>`;
+    });
+    html+='</div>';
+  }
+  if(!roster.length&&!customs.length)html+='<p style="font-size:12px;color:#888;padding:8px 0">該当なし</p>';
+  document.getElementById('evt-add-list').innerHTML=html;
+}
+function pickEvtStudent(name){
+  const s=(D.evtSessions||[]).find(x=>x.id===_evtModalSid);if(!s)return;
+  if(!s.students)s.students=[];
+  if(!s.students.includes(name)){s.students.push(name);if(!s.att)s.att={};s.att[name]='present';}
+  save();render();renderEvtModal();
+  closeM('evt-add-modal');
+}
+function addEvtCustomLabel(){
+  const input=document.getElementById('evt-add-freeform');
+  const name=input.value.trim();
+  if(!name)return;
+  if(!D.evtCustomLabels)D.evtCustomLabels=[];
+  if(!D.evtCustomLabels.includes(name))D.evtCustomLabels.push(name);
+  input.value='';
+  pickEvtStudent(name);
+}
+
+// 生徒チップのドラッグ&ドロップ（別のイベント枠へ移動。日をまたいでもOK）
+// タッチ・マウス両対応のためPointer Eventsで自前実装（HTML5ネイティブDnDはiOS Safari/Chromeの
+// タッチでは動作しないため使えない）。一定距離動くまではドラッグとみなさず、その場でのタップは
+// そのままブロックのclickイベント（openEvtEditor）にバブリングさせる。
+let _evtDrag=null,_evtDragPending=null;
+function evtChipPointerDown(e,sid,name){
+  if(isConfirmed())return;
+  _evtDragPending={sid,name,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,srcEl:e.currentTarget};
+  if(e.currentTarget.setPointerCapture)try{e.currentTarget.setPointerCapture(e.pointerId);}catch(err){}
+}
+function evtChipPointerMove(e){
+  if(_evtDrag&&_evtDrag.pointerId===e.pointerId){
+    _evtDrag.ghost.style.left=e.clientX+'px';_evtDrag.ghost.style.top=e.clientY+'px';
+    document.querySelectorAll('.evt-blk.drag-over').forEach(el=>el.classList.remove('drag-over'));
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    const blk=el&&el.closest&&el.closest('.evt-blk');
+    if(blk)blk.classList.add('drag-over');
+    return;
+  }
+  if(_evtDragPending&&_evtDragPending.pointerId===e.pointerId){
+    const dx=e.clientX-_evtDragPending.startX,dy=e.clientY-_evtDragPending.startY;
+    if(Math.hypot(dx,dy)>8){
+      const {sid,name,srcEl}=_evtDragPending;
+      const ghost=srcEl.cloneNode(true);
+      ghost.removeAttribute('onpointerdown');ghost.removeAttribute('onpointermove');ghost.removeAttribute('onpointerup');ghost.removeAttribute('onpointercancel');
+      ghost.setAttribute('style',`position:fixed;left:${e.clientX}px;top:${e.clientY}px;transform:translate(-50%,-50%);pointer-events:none;z-index:999;opacity:.9;padding:1px 5px;border-radius:12px;font-size:12px;font-weight:600;border:1px solid #1c8a7a;background:#e3f5f1;color:#0d5f52;box-shadow:0 2px 8px rgba(0,0,0,.3)`);
+      document.body.appendChild(ghost);
+      _evtDrag={sid,name,ghost,pointerId:e.pointerId};
+      _evtDragPending=null;
+    }
+  }
+}
+function evtChipPointerUp(e){
+  if(_evtDrag&&_evtDrag.pointerId===e.pointerId){
+    const {sid,name,ghost}=_evtDrag;
+    document.querySelectorAll('.evt-blk.drag-over').forEach(el=>el.classList.remove('drag-over'));
+    ghost.remove();
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    const blk=el&&el.closest&&el.closest('.evt-blk');
+    _evtDrag=null;
+    if(blk){
+      const toSid=blk.getAttribute('data-sid');
+      if(toSid&&toSid!==sid)moveEvtStudent(sid,toSid,name);
+    }
+  } else {
+    _evtDragPending=null; // 移動量が小さいタップ: そのままclickをブロックへバブリングさせる
+  }
+}
+function evtChipPointerCancel(e){
+  if(_evtDrag&&_evtDrag.pointerId===e.pointerId){_evtDrag.ghost.remove();_evtDrag=null;}
+  _evtDragPending=null;
+}
+function moveEvtStudent(fromSid,toSid,name){
+  const from=(D.evtSessions||[]).find(x=>x.id===fromSid);
+  const to=(D.evtSessions||[]).find(x=>x.id===toSid);
+  if(!from||!to)return;
+  from.students=(from.students||[]).filter(n=>n!==name);
+  const prevAtt=from.att&&from.att[name];
+  if(from.att)delete from.att[name];
+  if(!to.students)to.students=[];
+  if(!to.students.includes(name))to.students.push(name);
+  if(!to.att)to.att={};
+  if(!to.att[name])to.att[name]=prevAtt||'present';
+  save();render();
+  if(document.getElementById('evt-modal').style.display==='flex'&&(_evtModalSid===fromSid||_evtModalSid===toSid))renderEvtModal();
+}
+
 function addIv(){
   if(isConfirmed())return;
   const date=document.getElementById('iv-date').value,time=document.getElementById('iv-time').value,name=document.getElementById('iv-name').value.trim();
@@ -2319,6 +2670,12 @@ function applyLoadedData(pd,pmk){
   if(!D.snapshots||typeof D.snapshots!=='object')D.snapshots={};
   if(!Array.isArray(D.spots))D.spots=[];
   if(!Array.isArray(D.weekSkips))D.weekSkips=[];
+  if(!Array.isArray(D.evtSessions))D.evtSessions=[];
+  if(!Array.isArray(D.evtCustomLabels))D.evtCustomLabels=[];
+  D.evtSessions.forEach(s=>{
+    if(!Array.isArray(s.students))s.students=[];
+    if(!s.att||typeof s.att!=='object')s.att={};
+  });
   D.classes.forEach(c=>{
     if(c.isPrivate===undefined)c.isPrivate=false;
     if(c.kids===undefined)c.kids=false;
@@ -2358,7 +2715,7 @@ function load(){
 }
 
 function initD(){
-  return{interviews:[],att:{},hols:[],tempHols:[],specials:[],confirmedWeeks:[],privateStudents:[...DEFAULT_PRI],priSel:{},classes:[
+  return{interviews:[],att:{},hols:[],tempHols:[],specials:[],confirmedWeeks:[],privateStudents:[...DEFAULT_PRI],priSel:{},evtSessions:[],evtCustomLabels:[],classes:[
     // ↓ サンプルクラスです。参考にしながら管理タブから実際のクラスを追加してください
     {id:'sample-1',dow:2,start:'16:00',end:'16:55',level:'E3/E4',textbook:'HiH1TiP1',color:'#eaf3de',subCid:'',kids:true,isPrivate:false,sd:{},students:['サンプル生徒A','サンプル生徒B']},
   ]};
