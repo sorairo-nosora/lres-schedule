@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v79: 確認ダイアログ（削除確認など）が、それを呼び出した親モーダル（イベント枠編集モーダルなど）の裏に隠れてしまい操作できないバグを修正。#confirm-modalと他のモーダルは同じ.overlayクラスでz-index:100が共通だったため、DOM上で後に定義されているモーダル（イベント枠関連など）が確認ダイアログより上に表示されてしまっていた。#confirm-modalにz-index:150を指定し、常に他のモーダルより手前に表示されるようにした。 v78: イベント枠（変則スケジュール）内の生徒名チップの背景色を、固定の緑色から、その生徒が在籍しているクラスのクラスボックスと同じ色に変更。evtStudentColor(name,ds)を追加し、D.classesから生徒が所属するクラスを探してその日のクラス色（getClsAttrで日付ごとの色変更にも対応）を返す。イベント枠内のチップと、生徒追加モーダルの「在籍生徒」候補チップの両方に適用。どのクラスにも属さない見込み客・過去の生徒などの自由入力ラベルは、従来通り固定の緑色にフォールバック。 v77: 面談時刻・スポット授業・新規クラス追加・クラス編集の時刻選択が1分刻みだったのを5分刻みに統一。全ての<input type="time">にstep="300"を追加（イベント枠は元々v75で5分刻み済み）。 v76: イベント枠の「＋生徒を追加」で、生徒を1人選ぶたびにモーダルが閉じてしまい複数人をまとめて追加できなかったのを修正。pickEvtStudent()内のcloseM('evt-add-modal')を削除し、代わりに一覧を再描画（追加済みの生徒をリストから除外）するだけにして、モーダルを開いたまま連続して複数人を選択・自由入力ラベル追加ができるようにした。閉じるのは「閉じる」ボタンかオーバーレイタップで行う。v75: 変則スケジュール（休校日イベント）機能を追加。休校・臨時休校に設定した日にのみ、通常クラスとは完全に独立した「イベント枠」を1日単位で作成できるようにした。空いている時間帯をタップすると開始・終了時刻とタイトルを指定して枠を作成でき、時間が重なる枠は通常クラスと同じロジックで自動的に列分割される（3件目のE4/5クラスのように）。各枠には全生徒（在籍中の全クラスの生徒）から自由に参加者を追加でき、加えて自由入力で「見込み客」「過去の生徒」などのラベルも追加可能（一度入力したラベルは候補として次回以降も再利用できる）。参加者ごとに通常クラスと同じ出席・欠席・遅刻の記録ができる。出欠を取ったあとで移動の希望が出た場合は、枠内の生徒名チップを別のイベント枠（日をまたいでもOK）へドラッグ&ドロップするだけで移動できる（HTML5標準のドラッグ&ドロップはiOS Safari/Chromeのタッチでは動作しないため、Pointer Eventsで自前実装）。休校指定を後から解除しても、作成済みのイベント枠は表示・編集・削除ができるように残る（新規作成のみ休校日に制限）。v74: 生徒数の多いクラスがスマホ（狭い画面幅）で列分割されると、生徒名チップが何行にも折り返して枠のほとんどを占め、チップ部分をタップすると出欠モーダルが開かない（ブロック上端のラベル行だけ反応する）バグを修正。openClsWeek()にe.target.classList.contains('chip')の判定でチップ上のクリックを無視するガードがあったが、チップ自体に元々クリック処理は無く単に無反応にしていただけだったため、このガードを削除。v73: スキップしたクラスのゴースト表示（休止中の枠+「解除」ボタン）が、v72で修正した面談ブロックと同じ原因（その日の列を無視した全幅描画・かつクラスブロックと同じz-index:2でHTML上で後に描画されるため優先される）で、時間帯が重なる他のクラスブロックのクリックを奪っていたバグを修正。ゴースト自体には元々クリック処理がなく「↩ 解除」ボタンだけが機能するため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「解除」ボタンだけpointer-events:autoで維持。v72: 面談ブロック(.iv-block)が、その日の列（左右の枠）を無視して常に全幅・かつクラスブロック(z-index:2)より上のz-index:5で描画されていたため、面談と時間帯が重なるクラスブロックの一部がクリックできなくなる（マウスカーソルも矢印のままになる）バグを修正。面談ブロック自体には元々クリック処理がなく削除用の「×」だけが機能していたため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「×」だけpointer-events:autoで維持。v71: 週別クラス詳細モーダルの「備考」ボタン(📝)を押しても入力欄が開かないバグを修正。toggleCwmNote()がDOM階層を1段浅く辿っており、常に対象要素が見つからず無反応になっていた（btn.closest('div').nextElementSibling → btn.closest('div').parentElement.nextElementSibling）。v70: 時間割ブロックの「skip」ボタン（この週だけ非表示）が、スマホ・タブレットではタップしただけで（疑似ホバーにより）右上に出てしまい、出欠・遅刻の記録モーダルへのアクセスを妨げていたのを修正。CSSに@media (hover:hover) and (pointer:fine)を追加し、実際にマウスでホバーできる環境（PC）でのみ表示されるように変更。タッチ端末では従来通り長押し(600ms)でのスキップ操作を使う。v69: 生徒の退会・再登録の仕組みを見直し。これまでは生徒ごとに入会日・退会日を1組しか記録できず、退会した生徒を同じクラスに再登録すると「退会済み」の判定が残ったままになり二度と表示されなくなるバグがあった。在籍期間を複数記録できる履歴（periods）方式に変更し、入退会を繰り返しても矛盾しないように修正。あわせて、退会すると過去週の表示からもその生徒が消えてしまっていた問題も修正（在籍期間履歴をもとに、退会前の週は引き続き表示されるように）。また「削除」ボタンに、通常の退会（記録を残す）と、誤って登録してしまった場合向けの完全削除（記録ごと消去）の2つの選択肢を追加。既存データは自動的に新形式へ移行され、これまでの記録に影響はない。v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
+<!-- v80: 全ての時刻入力（面談・スポット授業/体験・新規クラス追加・クラス編集・イベント枠）を、ブラウザ標準のinput type="time"から自前生成の<select>（9:00〜22:00・5分刻みの候補一覧）に変更。以前はstep="300"属性を付けても、ブラウザ（特にmacOS版Chrome）のネイティブ時刻ピッカーのドロップダウンが1分刻み・24時までの選択肢を表示してしまい、意図通りに機能していなかった。timeOptsHTML()で9:00〜22:00(GS〜GE)を5分刻みで列挙した共通の<option>一覧を生成し、静的な<select>にはpopulateStaticTimeSelects()で流し込み、クラス編集カードのように動的生成される<select>には直接埋め込む方式で、全シーンで一貫して5分刻み・9時〜22時の範囲に制限されるようにした。既存の.value読み書きコードはinputのままでも変更なしで動作する。 v79: 確認ダイアログ（削除確認など）が、それを呼び出した親モーダル（イベント枠編集モーダルなど）の裏に隠れてしまい操作できないバグを修正。#confirm-modalと他のモーダルは同じ.overlayクラスでz-index:100が共通だったため、DOM上で後に定義されているモーダル（イベント枠関連など）が確認ダイアログより上に表示されてしまっていた。#confirm-modalにz-index:150を指定し、常に他のモーダルより手前に表示されるようにした。 v78: イベント枠（変則スケジュール）内の生徒名チップの背景色を、固定の緑色から、その生徒が在籍しているクラスのクラスボックスと同じ色に変更。evtStudentColor(name,ds)を追加し、D.classesから生徒が所属するクラスを探してその日のクラス色（getClsAttrで日付ごとの色変更にも対応）を返す。イベント枠内のチップと、生徒追加モーダルの「在籍生徒」候補チップの両方に適用。どのクラスにも属さない見込み客・過去の生徒などの自由入力ラベルは、従来通り固定の緑色にフォールバック。 v77: 面談時刻・スポット授業・新規クラス追加・クラス編集の時刻選択が1分刻みだったのを5分刻みに統一。全ての<input type="time">にstep="300"を追加（イベント枠は元々v75で5分刻み済み）。 v76: イベント枠の「＋生徒を追加」で、生徒を1人選ぶたびにモーダルが閉じてしまい複数人をまとめて追加できなかったのを修正。pickEvtStudent()内のcloseM('evt-add-modal')を削除し、代わりに一覧を再描画（追加済みの生徒をリストから除外）するだけにして、モーダルを開いたまま連続して複数人を選択・自由入力ラベル追加ができるようにした。閉じるのは「閉じる」ボタンかオーバーレイタップで行う。v75: 変則スケジュール（休校日イベント）機能を追加。休校・臨時休校に設定した日にのみ、通常クラスとは完全に独立した「イベント枠」を1日単位で作成できるようにした。空いている時間帯をタップすると開始・終了時刻とタイトルを指定して枠を作成でき、時間が重なる枠は通常クラスと同じロジックで自動的に列分割される（3件目のE4/5クラスのように）。各枠には全生徒（在籍中の全クラスの生徒）から自由に参加者を追加でき、加えて自由入力で「見込み客」「過去の生徒」などのラベルも追加可能（一度入力したラベルは候補として次回以降も再利用できる）。参加者ごとに通常クラスと同じ出席・欠席・遅刻の記録ができる。出欠を取ったあとで移動の希望が出た場合は、枠内の生徒名チップを別のイベント枠（日をまたいでもOK）へドラッグ&ドロップするだけで移動できる（HTML5標準のドラッグ&ドロップはiOS Safari/Chromeのタッチでは動作しないため、Pointer Eventsで自前実装）。休校指定を後から解除しても、作成済みのイベント枠は表示・編集・削除ができるように残る（新規作成のみ休校日に制限）。v74: 生徒数の多いクラスがスマホ（狭い画面幅）で列分割されると、生徒名チップが何行にも折り返して枠のほとんどを占め、チップ部分をタップすると出欠モーダルが開かない（ブロック上端のラベル行だけ反応する）バグを修正。openClsWeek()にe.target.classList.contains('chip')の判定でチップ上のクリックを無視するガードがあったが、チップ自体に元々クリック処理は無く単に無反応にしていただけだったため、このガードを削除。v73: スキップしたクラスのゴースト表示（休止中の枠+「解除」ボタン）が、v72で修正した面談ブロックと同じ原因（その日の列を無視した全幅描画・かつクラスブロックと同じz-index:2でHTML上で後に描画されるため優先される）で、時間帯が重なる他のクラスブロックのクリックを奪っていたバグを修正。ゴースト自体には元々クリック処理がなく「↩ 解除」ボタンだけが機能するため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「解除」ボタンだけpointer-events:autoで維持。v72: 面談ブロック(.iv-block)が、その日の列（左右の枠）を無視して常に全幅・かつクラスブロック(z-index:2)より上のz-index:5で描画されていたため、面談と時間帯が重なるクラスブロックの一部がクリックできなくなる（マウスカーソルも矢印のままになる）バグを修正。面談ブロック自体には元々クリック処理がなく削除用の「×」だけが機能していたため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「×」だけpointer-events:autoで維持。v71: 週別クラス詳細モーダルの「備考」ボタン(📝)を押しても入力欄が開かないバグを修正。toggleCwmNote()がDOM階層を1段浅く辿っており、常に対象要素が見つからず無反応になっていた（btn.closest('div').nextElementSibling → btn.closest('div').parentElement.nextElementSibling）。v70: 時間割ブロックの「skip」ボタン（この週だけ非表示）が、スマホ・タブレットではタップしただけで（疑似ホバーにより）右上に出てしまい、出欠・遅刻の記録モーダルへのアクセスを妨げていたのを修正。CSSに@media (hover:hover) and (pointer:fine)を追加し、実際にマウスでホバーできる環境（PC）でのみ表示されるように変更。タッチ端末では従来通り長押し(600ms)でのスキップ操作を使う。v69: 生徒の退会・再登録の仕組みを見直し。これまでは生徒ごとに入会日・退会日を1組しか記録できず、退会した生徒を同じクラスに再登録すると「退会済み」の判定が残ったままになり二度と表示されなくなるバグがあった。在籍期間を複数記録できる履歴（periods）方式に変更し、入退会を繰り返しても矛盾しないように修正。あわせて、退会すると過去週の表示からもその生徒が消えてしまっていた問題も修正（在籍期間履歴をもとに、退会前の週は引き続き表示されるように）。また「削除」ボタンに、通常の退会（記録を残す）と、誤って登録してしまった場合向けの完全削除（記録ごと消去）の2つの選択肢を追加。既存データは自動的に新形式へ移行され、これまでの記録に影響はない。v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -227,7 +227,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div class="sec">
       <h3>🗣 面談を追加</h3>
       <div class="fr"><label>日付</label><input type="date" id="iv-date"></div>
-      <div class="fr"><label>時間</label><input type="time" id="iv-time" value="17:00" step="300"></div>
+      <div class="fr"><label>時間</label><select class="time-sel" id="iv-time" data-default="17:00"></select></div>
       <div class="fr"><label>生徒名</label><input type="text" id="iv-name"></div>
       <div class="fr"><label>備考</label><input type="text" id="iv-note" placeholder="保護者同伴等"></div>
       <button class="btn btn-p" onclick="addIv()">追加</button>
@@ -260,8 +260,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <h3>✨ スポット授業</h3>
     <div class="msub" id="spot-date-label"></div>
     <div style="margin:12px 0;display:flex;flex-direction:column;gap:8px">
-      <div class="fr"><label>開始</label><input type="time" id="spot-start" step="300"></div>
-      <div class="fr"><label>終了</label><input type="time" id="spot-end" step="300"></div>
+      <div class="fr"><label>開始</label><select class="time-sel" id="spot-start" data-default=""></select></div>
+      <div class="fr"><label>終了</label><select class="time-sel" id="spot-end" data-default=""></select></div>
       <div class="fr"><label>生徒名</label><input type="text" id="spot-students" placeholder="例: 田中、鈴木"></div>
     </div>
     <button class="btn btn-p" onclick="addSpot()" style="width:100%;margin-bottom:8px">追加</button>
@@ -287,7 +287,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <h3>クラスを追加</h3>
     <div style="margin-top:12px">
       <div class="fr"><label>曜日</label><select id="n-day"><option value="1">月</option><option value="2">火</option><option value="3">水</option><option value="4">木</option><option value="5">金</option><option value="6">土</option></select></div>
-      <div class="fr"><label>開始</label><input type="time" id="n-start" value="16:00" step="300"><label>終了</label><input type="time" id="n-end" value="16:55" step="300"></div>
+      <div class="fr"><label>開始</label><select class="time-sel" id="n-start" data-default="16:00"></select><label>終了</label><select class="time-sel" id="n-end" data-default="16:55"></select></div>
       <div class="fr"><label>レベル</label><input type="text" id="n-level" placeholder="E3/E4"></div>
       <div class="fr"><label>テキスト</label><input type="text" id="n-book" placeholder="HiH1TiP1"></div>
       <div class="fr"><label>色</label><select id="n-color"><option value="#eaf3de">緑</option><option value="#d4edba">緑（濃）</option><option value="#e6f1fb">青</option><option value="#c2ddf7">青（濃）</option><option value="#faeeda">黄</option><option value="#f5d98a">黄（濃）</option><option value="#faece7">橙</option><option value="#f5c9b8">橙（濃）</option><option value="#fbeaf0">ピンク</option><option value="#f5c0d8">ピンク（濃）</option><option value="#e1f5ee">水色</option><option value="#a8e6d0">水色（濃）</option><option value="#eeedfe">紫</option><option value="#OUTLINE">枠線のみ（白地）</option></select></div>
@@ -353,8 +353,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <h3>🎪 イベント枠を追加</h3>
     <div class="msub" id="evt-create-date-label"></div>
     <div style="margin:12px 0;display:flex;flex-direction:column;gap:8px">
-      <div class="fr"><label>開始</label><input type="time" id="evt-create-start" step="300" min="09:00" max="22:00"></div>
-      <div class="fr"><label>終了</label><input type="time" id="evt-create-end" step="300" min="09:00" max="22:00"></div>
+      <div class="fr"><label>開始</label><select class="time-sel" id="evt-create-start" data-default=""></select></div>
+      <div class="fr"><label>終了</label><select class="time-sel" id="evt-create-end" data-default=""></select></div>
       <div class="fr"><label>タイトル</label><input type="text" id="evt-create-title" placeholder="例: 文化祭イベント（空欄可）"></div>
     </div>
     <button class="btn btn-p" onclick="createEvtSession()" style="width:100%;margin-bottom:8px">作成</button>
@@ -369,7 +369,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div class="msub" id="evt-date-label"></div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:6px">
       <div class="fr"><label>タイトル</label><input type="text" id="evt-title-input" placeholder="例: 文化祭イベント" onchange="updateEvtField('title',this.value)" style="flex:1"></div>
-      <div class="fr"><label>開始</label><input type="time" id="evt-start-input" step="300" min="09:00" max="22:00" onchange="updateEvtField('start',this.value)"><label>終了</label><input type="time" id="evt-end-input" step="300" min="09:00" max="22:00" onchange="updateEvtField('end',this.value)"></div>
+      <div class="fr"><label>開始</label><select class="time-sel" id="evt-start-input" data-default="" onchange="updateEvtField('start',this.value)"></select><label>終了</label><select class="time-sel" id="evt-end-input" data-default="" onchange="updateEvtField('end',this.value)"></select></div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:2px">
       <div style="font-size:11px;color:#888;font-weight:600">参加者</div>
@@ -473,6 +473,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 const DJ=['','月','火','水','木','金','土','日'];
 const SHOWN=[2,3,4,5,6];
 const GS=9*60,GE=22*60;
+
+// 全ての時刻入力（面談・スポット授業・体験・クラス追加/編集・イベント枠など）で共通の
+// <select>用<option>一覧を生成。9:00〜22:00（GS〜GE）の範囲を5分刻みで列挙する。
+function timeOptsHTML(sel){
+  let h='';
+  for(let m=GS;m<=GE;m+=5){
+    const t=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+    h+=`<option value="${t}"${t===sel?' selected':''}>${t}</option>`;
+  }
+  return h;
+}
+// 静的HTML内の時刻<select>（value属性代わりのdata-defaultで初期値指定）へoptionを流し込む
+function populateStaticTimeSelects(){
+  document.querySelectorAll('select.time-sel[data-default]').forEach(el=>{
+    el.innerHTML=timeOptsHTML(el.getAttribute('data-default'));
+  });
+}
 
 // iOS SafariはローカルHTMLでconfirm()がブロックされるためカスタム実装
 let _confirmCb=null;
@@ -2144,7 +2161,7 @@ function renderAdmin(){
       </div>
       <div class="cbody${op?' open':''}" id="cb-${cls.id}">
         <div class="fr"><label>曜日</label><select id="ed-d-${cls.id}" onchange="qs('${cls.id}')">${[1,2,3,4,5,6].map(n=>`<option value="${n}"${cls.dow===n?' selected':''}>${DJ[n]}曜</option>`).join('')}</select></div>
-        <div class="fr"><label>開始</label><input type="time" id="ed-s-${cls.id}" value="${cls.start}" step="300" onchange="qs('${cls.id}')"><label>終了</label><input type="time" id="ed-e-${cls.id}" value="${cls.end}" step="300" onchange="qs('${cls.id}')"></div>
+        <div class="fr"><label>開始</label><select id="ed-s-${cls.id}" onchange="qs('${cls.id}')">${timeOptsHTML(cls.start)}</select><label>終了</label><select id="ed-e-${cls.id}" onchange="qs('${cls.id}')">${timeOptsHTML(cls.end)}</select></div>
         <div class="fr"><label>レベル</label><input type="text" id="ed-l-${cls.id}" value="${cls.level||''}" onchange="qs('${cls.id}')"></div>
         <div class="fr"><label>テキスト</label><input type="text" id="ed-t-${cls.id}" value="${cls.textbook||''}" onchange="qs('${cls.id}')"></div>
         <div class="fr"><label>色</label><select id="ed-c-${cls.id}" onchange="qs('${cls.id}')">${cos.map(([v,l])=>`<option value="${v}"${cls.color===v?' selected':''}>${l}</option>`).join('')}</select></div>
@@ -2776,6 +2793,7 @@ function printSchedule(){
   },300);
 }
 
+populateStaticTimeSelects();
 load();pruneOldSnapshots();recheckAllMakeups();
 // localStorageに既存データがあった場合のみ上書き保存（キャッシュクリア後の空データ上書きを防止）
 if(localStorage.getItem(KEY)){localStorage.setItem(KEY,JSON.stringify({D,MK}));}
