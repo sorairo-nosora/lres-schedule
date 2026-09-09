@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v82: 各ブロックの人数表示を、見にくかった人型アイコン（👤N）から、④のような黒枠・黒字・白背景の丸数字バッジ（cntBadge()）に変更。通常クラス・イベント枠は開始時刻の隣、スポット授業はSPOTラベルの隣に表示する位置は変更なし。 v81: 通常クラス・スポット授業（体験含む）・イベント枠（変則スケジュール）の各ブロックに、そのコマの人数（👤N）を表示するように変更。これまでは生徒名チップを目視で数える必要があったが、開始時刻の隣（通常クラス・イベント枠）またはSPOTラベルの隣（スポット授業）に人数バッジを追加した。通常クラスの人数は、休会中の生徒（(名前)表示）や振替キャンセル済みの枠は除いた「実際にその日来る人数」（在籍生徒＋有効な振替のみ）としてカウントし、スポット授業・イベント枠は登録されている参加者数をそのままカウントする。 v80: 全ての時刻入力（面談・スポット授業/体験・新規クラス追加・クラス編集・イベント枠）を、ブラウザ標準のinput type="time"から自前生成の<select>（9:00〜22:00・5分刻みの候補一覧）に変更。以前はstep="300"属性を付けても、ブラウザ（特にmacOS版Chrome）のネイティブ時刻ピッカーのドロップダウンが1分刻み・24時までの選択肢を表示してしまい、意図通りに機能していなかった。timeOptsHTML()で9:00〜22:00(GS〜GE)を5分刻みで列挙した共通の<option>一覧を生成し、静的な<select>にはpopulateStaticTimeSelects()で流し込み、クラス編集カードのように動的生成される<select>には直接埋め込む方式で、全シーンで一貫して5分刻み・9時〜22時の範囲に制限されるようにした。既存の.value読み書きコードはinputのままでも変更なしで動作する。 v79: 確認ダイアログ（削除確認など）が、それを呼び出した親モーダル（イベント枠編集モーダルなど）の裏に隠れてしまい操作できないバグを修正。#confirm-modalと他のモーダルは同じ.overlayクラスでz-index:100が共通だったため、DOM上で後に定義されているモーダル（イベント枠関連など）が確認ダイアログより上に表示されてしまっていた。#confirm-modalにz-index:150を指定し、常に他のモーダルより手前に表示されるようにした。 v78: イベント枠（変則スケジュール）内の生徒名チップの背景色を、固定の緑色から、その生徒が在籍しているクラスのクラスボックスと同じ色に変更。evtStudentColor(name,ds)を追加し、D.classesから生徒が所属するクラスを探してその日のクラス色（getClsAttrで日付ごとの色変更にも対応）を返す。イベント枠内のチップと、生徒追加モーダルの「在籍生徒」候補チップの両方に適用。どのクラスにも属さない見込み客・過去の生徒などの自由入力ラベルは、従来通り固定の緑色にフォールバック。 v77: 面談時刻・スポット授業・新規クラス追加・クラス編集の時刻選択が1分刻みだったのを5分刻みに統一。全ての<input type="time">にstep="300"を追加（イベント枠は元々v75で5分刻み済み）。 v76: イベント枠の「＋生徒を追加」で、生徒を1人選ぶたびにモーダルが閉じてしまい複数人をまとめて追加できなかったのを修正。pickEvtStudent()内のcloseM('evt-add-modal')を削除し、代わりに一覧を再描画（追加済みの生徒をリストから除外）するだけにして、モーダルを開いたまま連続して複数人を選択・自由入力ラベル追加ができるようにした。閉じるのは「閉じる」ボタンかオーバーレイタップで行う。v75: 変則スケジュール（休校日イベント）機能を追加。休校・臨時休校に設定した日にのみ、通常クラスとは完全に独立した「イベント枠」を1日単位で作成できるようにした。空いている時間帯をタップすると開始・終了時刻とタイトルを指定して枠を作成でき、時間が重なる枠は通常クラスと同じロジックで自動的に列分割される（3件目のE4/5クラスのように）。各枠には全生徒（在籍中の全クラスの生徒）から自由に参加者を追加でき、加えて自由入力で「見込み客」「過去の生徒」などのラベルも追加可能（一度入力したラベルは候補として次回以降も再利用できる）。参加者ごとに通常クラスと同じ出席・欠席・遅刻の記録ができる。出欠を取ったあとで移動の希望が出た場合は、枠内の生徒名チップを別のイベント枠（日をまたいでもOK）へドラッグ&ドロップするだけで移動できる（HTML5標準のドラッグ&ドロップはiOS Safari/Chromeのタッチでは動作しないため、Pointer Eventsで自前実装）。休校指定を後から解除しても、作成済みのイベント枠は表示・編集・削除ができるように残る（新規作成のみ休校日に制限）。v74: 生徒数の多いクラスがスマホ（狭い画面幅）で列分割されると、生徒名チップが何行にも折り返して枠のほとんどを占め、チップ部分をタップすると出欠モーダルが開かない（ブロック上端のラベル行だけ反応する）バグを修正。openClsWeek()にe.target.classList.contains('chip')の判定でチップ上のクリックを無視するガードがあったが、チップ自体に元々クリック処理は無く単に無反応にしていただけだったため、このガードを削除。v73: スキップしたクラスのゴースト表示（休止中の枠+「解除」ボタン）が、v72で修正した面談ブロックと同じ原因（その日の列を無視した全幅描画・かつクラスブロックと同じz-index:2でHTML上で後に描画されるため優先される）で、時間帯が重なる他のクラスブロックのクリックを奪っていたバグを修正。ゴースト自体には元々クリック処理がなく「↩ 解除」ボタンだけが機能するため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「解除」ボタンだけpointer-events:autoで維持。v72: 面談ブロック(.iv-block)が、その日の列（左右の枠）を無視して常に全幅・かつクラスブロック(z-index:2)より上のz-index:5で描画されていたため、面談と時間帯が重なるクラスブロックの一部がクリックできなくなる（マウスカーソルも矢印のままになる）バグを修正。面談ブロック自体には元々クリック処理がなく削除用の「×」だけが機能していたため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「×」だけpointer-events:autoで維持。v71: 週別クラス詳細モーダルの「備考」ボタン(📝)を押しても入力欄が開かないバグを修正。toggleCwmNote()がDOM階層を1段浅く辿っており、常に対象要素が見つからず無反応になっていた（btn.closest('div').nextElementSibling → btn.closest('div').parentElement.nextElementSibling）。v70: 時間割ブロックの「skip」ボタン（この週だけ非表示）が、スマホ・タブレットではタップしただけで（疑似ホバーにより）右上に出てしまい、出欠・遅刻の記録モーダルへのアクセスを妨げていたのを修正。CSSに@media (hover:hover) and (pointer:fine)を追加し、実際にマウスでホバーできる環境（PC）でのみ表示されるように変更。タッチ端末では従来通り長押し(600ms)でのスキップ操作を使う。v69: 生徒の退会・再登録の仕組みを見直し。これまでは生徒ごとに入会日・退会日を1組しか記録できず、退会した生徒を同じクラスに再登録すると「退会済み」の判定が残ったままになり二度と表示されなくなるバグがあった。在籍期間を複数記録できる履歴（periods）方式に変更し、入退会を繰り返しても矛盾しないように修正。あわせて、退会すると過去週の表示からもその生徒が消えてしまっていた問題も修正（在籍期間履歴をもとに、退会前の週は引き続き表示されるように）。また「削除」ボタンに、通常の退会（記録を残す）と、誤って登録してしまった場合向けの完全削除（記録ごと消去）の2つの選択肢を追加。既存データは自動的に新形式へ移行され、これまでの記録に影響はない。v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
+<!-- v83: イベント枠（変則スケジュール）に、同じ週内での生徒の重複登録を防ぐ仕組みと、「欠席」ボックスを追加。「＋生徒を追加」の在籍生徒・見込み客/過去の生徒候補は、その週の他のイベント枠または欠席ボックスに既に登録済みの生徒を自動的に除外するようにし（一度使われたチップは候補から消える）、候補チップをクリックする限り重複は起こらない。自由入力欄だけは事前に候補から除外できないため、手入力で登録しようとした名前が既に週内で使われていた場合のみエラーダイアログを表示するようにした。あわせて、その週にイベント枠が1つでもある場合、時間割の一番上に「🚫 欠席」という灰色破線のボックスを表示。既存のイベント枠と全く同じ見た目・同じドラッグ&ドロップ操作で生徒チップを出し入れでき、欠席にした生徒も「重複防止」の対象に含まれる（欠席から他の枠へ戻すことも可能）。evtWeekKey()/evtUsedThisWeek()で週単位の重複チェックを行い、moveEvtStudent()を拡張して欠席ボックス（擬似的なsid「absent:週キー」を持つ仮想の枠）とイベント枠の間の相互移動にも対応した。 v82: 各ブロックの人数表示を、見にくかった人型アイコン（👤N）から、④のような黒枠・黒字・白背景の丸数字バッジ（cntBadge()）に変更。通常クラス・イベント枠は開始時刻の隣、スポット授業はSPOTラベルの隣に表示する位置は変更なし。 v81: 通常クラス・スポット授業（体験含む）・イベント枠（変則スケジュール）の各ブロックに、そのコマの人数（👤N）を表示するように変更。これまでは生徒名チップを目視で数える必要があったが、開始時刻の隣（通常クラス・イベント枠）またはSPOTラベルの隣（スポット授業）に人数バッジを追加した。通常クラスの人数は、休会中の生徒（(名前)表示）や振替キャンセル済みの枠は除いた「実際にその日来る人数」（在籍生徒＋有効な振替のみ）としてカウントし、スポット授業・イベント枠は登録されている参加者数をそのままカウントする。 v80: 全ての時刻入力（面談・スポット授業/体験・新規クラス追加・クラス編集・イベント枠）を、ブラウザ標準のinput type="time"から自前生成の<select>（9:00〜22:00・5分刻みの候補一覧）に変更。以前はstep="300"属性を付けても、ブラウザ（特にmacOS版Chrome）のネイティブ時刻ピッカーのドロップダウンが1分刻み・24時までの選択肢を表示してしまい、意図通りに機能していなかった。timeOptsHTML()で9:00〜22:00(GS〜GE)を5分刻みで列挙した共通の<option>一覧を生成し、静的な<select>にはpopulateStaticTimeSelects()で流し込み、クラス編集カードのように動的生成される<select>には直接埋め込む方式で、全シーンで一貫して5分刻み・9時〜22時の範囲に制限されるようにした。既存の.value読み書きコードはinputのままでも変更なしで動作する。 v79: 確認ダイアログ（削除確認など）が、それを呼び出した親モーダル（イベント枠編集モーダルなど）の裏に隠れてしまい操作できないバグを修正。#confirm-modalと他のモーダルは同じ.overlayクラスでz-index:100が共通だったため、DOM上で後に定義されているモーダル（イベント枠関連など）が確認ダイアログより上に表示されてしまっていた。#confirm-modalにz-index:150を指定し、常に他のモーダルより手前に表示されるようにした。 v78: イベント枠（変則スケジュール）内の生徒名チップの背景色を、固定の緑色から、その生徒が在籍しているクラスのクラスボックスと同じ色に変更。evtStudentColor(name,ds)を追加し、D.classesから生徒が所属するクラスを探してその日のクラス色（getClsAttrで日付ごとの色変更にも対応）を返す。イベント枠内のチップと、生徒追加モーダルの「在籍生徒」候補チップの両方に適用。どのクラスにも属さない見込み客・過去の生徒などの自由入力ラベルは、従来通り固定の緑色にフォールバック。 v77: 面談時刻・スポット授業・新規クラス追加・クラス編集の時刻選択が1分刻みだったのを5分刻みに統一。全ての<input type="time">にstep="300"を追加（イベント枠は元々v75で5分刻み済み）。 v76: イベント枠の「＋生徒を追加」で、生徒を1人選ぶたびにモーダルが閉じてしまい複数人をまとめて追加できなかったのを修正。pickEvtStudent()内のcloseM('evt-add-modal')を削除し、代わりに一覧を再描画（追加済みの生徒をリストから除外）するだけにして、モーダルを開いたまま連続して複数人を選択・自由入力ラベル追加ができるようにした。閉じるのは「閉じる」ボタンかオーバーレイタップで行う。v75: 変則スケジュール（休校日イベント）機能を追加。休校・臨時休校に設定した日にのみ、通常クラスとは完全に独立した「イベント枠」を1日単位で作成できるようにした。空いている時間帯をタップすると開始・終了時刻とタイトルを指定して枠を作成でき、時間が重なる枠は通常クラスと同じロジックで自動的に列分割される（3件目のE4/5クラスのように）。各枠には全生徒（在籍中の全クラスの生徒）から自由に参加者を追加でき、加えて自由入力で「見込み客」「過去の生徒」などのラベルも追加可能（一度入力したラベルは候補として次回以降も再利用できる）。参加者ごとに通常クラスと同じ出席・欠席・遅刻の記録ができる。出欠を取ったあとで移動の希望が出た場合は、枠内の生徒名チップを別のイベント枠（日をまたいでもOK）へドラッグ&ドロップするだけで移動できる（HTML5標準のドラッグ&ドロップはiOS Safari/Chromeのタッチでは動作しないため、Pointer Eventsで自前実装）。休校指定を後から解除しても、作成済みのイベント枠は表示・編集・削除ができるように残る（新規作成のみ休校日に制限）。v74: 生徒数の多いクラスがスマホ（狭い画面幅）で列分割されると、生徒名チップが何行にも折り返して枠のほとんどを占め、チップ部分をタップすると出欠モーダルが開かない（ブロック上端のラベル行だけ反応する）バグを修正。openClsWeek()にe.target.classList.contains('chip')の判定でチップ上のクリックを無視するガードがあったが、チップ自体に元々クリック処理は無く単に無反応にしていただけだったため、このガードを削除。v73: スキップしたクラスのゴースト表示（休止中の枠+「解除」ボタン）が、v72で修正した面談ブロックと同じ原因（その日の列を無視した全幅描画・かつクラスブロックと同じz-index:2でHTML上で後に描画されるため優先される）で、時間帯が重なる他のクラスブロックのクリックを奪っていたバグを修正。ゴースト自体には元々クリック処理がなく「↩ 解除」ボタンだけが機能するため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「解除」ボタンだけpointer-events:autoで維持。v72: 面談ブロック(.iv-block)が、その日の列（左右の枠）を無視して常に全幅・かつクラスブロック(z-index:2)より上のz-index:5で描画されていたため、面談と時間帯が重なるクラスブロックの一部がクリックできなくなる（マウスカーソルも矢印のままになる）バグを修正。面談ブロック自体には元々クリック処理がなく削除用の「×」だけが機能していたため、外枠にpointer-events:noneを付けてクリックを下のクラスブロックへ透過させ、「×」だけpointer-events:autoで維持。v71: 週別クラス詳細モーダルの「備考」ボタン(📝)を押しても入力欄が開かないバグを修正。toggleCwmNote()がDOM階層を1段浅く辿っており、常に対象要素が見つからず無反応になっていた（btn.closest('div').nextElementSibling → btn.closest('div').parentElement.nextElementSibling）。v70: 時間割ブロックの「skip」ボタン（この週だけ非表示）が、スマホ・タブレットではタップしただけで（疑似ホバーにより）右上に出てしまい、出欠・遅刻の記録モーダルへのアクセスを妨げていたのを修正。CSSに@media (hover:hover) and (pointer:fine)を追加し、実際にマウスでホバーできる環境（PC）でのみ表示されるように変更。タッチ端末では従来通り長押し(600ms)でのスキップ操作を使う。v69: 生徒の退会・再登録の仕組みを見直し。これまでは生徒ごとに入会日・退会日を1組しか記録できず、退会した生徒を同じクラスに再登録すると「退会済み」の判定が残ったままになり二度と表示されなくなるバグがあった。在籍期間を複数記録できる履歴（periods）方式に変更し、入退会を繰り返しても矛盾しないように修正。あわせて、退会すると過去週の表示からもその生徒が消えてしまっていた問題も修正（在籍期間履歴をもとに、退会前の週は引き続き表示されるように）。また「削除」ボタンに、通常の退会（記録を残す）と、誤って登録してしまった場合向けの完全削除（記録ごと消去）の2つの選択肢を追加。既存データは自動的に新形式へ移行され、これまでの記録に影響はない。v68: v67でのスポット授業の列割り当て修正が、通常クラス同士の左右の並びまで変えてしまう（スポットの開始時刻次第で通常クラスの列順が入れ替わる）副作用があったのを修正。通常クラスの列は元のロジック（開始時刻順）のまま固定し、スポット授業だけ実際に時間が重なる列を避けて空いている列に割り当てるように変更。v67: スポット授業が通常クラスと時間帯が被る場合に、列（左右の枠）を無視して常に全幅で描画され、隣のクラスに重なって左側にはみ出して見えるバグを修正（スポット授業も通常クラスと同じ列割り当てロジックの対象に含めるように変更）。v66: 休校・面談タブを開いたまま「前週/次週」（スワイプ含む）で週移動すると、「休校日（この週）」「臨時休校（この週）」ボタンが古い週の日付のまま再描画されず、クリック時に見えている週と違う日付を変更してしまうバグを修正（navWeek()でrenderHolTab()も呼ぶように）。v65: 休校・面談タブに「📅 カレンダー」を追加。登録済みの休校（D.hols）・臨時休校（D.tempHols）を月表示カレンダーで一覧確認でき、確定済み週／3ヶ月より前を除きタップで解除できる（追加はこのカレンダーからは不可、週タブかインポートから）。v64: 休校日インポート追加（Lesson Report EditorのJSONを月表示カレンダーで選んで一括登録）。 -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -69,6 +69,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .spot-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:6;touch-action:manipulation}
 .evt-blk{position:absolute;border-radius:6px;overflow:hidden;cursor:pointer;z-index:2;touch-action:manipulation;box-shadow:inset 0 0 0 1.5px #1c8a7a}
 .evt-blk.drag-over{box-shadow:inset 0 0 0 2.5px #0d5f52;background:#dcf3ee!important}
+.evt-absent-blk.drag-over{box-shadow:inset 0 0 0 2.5px #666!important;background:#e5e3dd!important}
 .chip-evt{display:inline-block;padding:1px 5px;border-radius:12px;font-size:12px;font-weight:600;margin:0 1px 1px 0;cursor:grab;border:1px solid #1c8a7a;background:#e3f5f1;color:#0d5f52;white-space:normal;word-break:break-all;line-height:1.15;overflow:hidden;max-width:100%}
 .chip-evt.absent{text-decoration:line-through;opacity:0.5}
 .chip-evt.late{border-style:solid!important;border-width:2px}
@@ -187,6 +188,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <span>✓ この週は確定済みです。編集は無効になっています。</span>
       <button onclick="unconfirmWeek()" style="font-size:11px;padding:2px 8px;border:1px solid #f0c040;border-radius:6px;background:#fff;cursor:pointer;color:#7a5a00;margin-left:auto">確定を解除</button>
     </div>
+    <div id="evt-absent-bar" style="display:none;padding:6px 16px;flex-shrink:0"></div>
     <div id="grid-scroll" style="overflow:auto;flex:1">
       <div id="print-week-label" style="display:none"></div>
       <div id="grid-wrap">
@@ -1079,6 +1081,7 @@ function render(){
   });
   g+=`</div>`;
   document.getElementById('grid').innerHTML=g;
+  renderEvtAbsentBar();
 
   // スマホ長押しでクラスをこの週だけスキップ
   if(!isConfirmed()){
@@ -1865,6 +1868,24 @@ function getEvtAtt(sid,n){const s=(D.evtSessions||[]).find(x=>x.id===sid);return
 function setEvtAtt(sid,n,v){const s=(D.evtSessions||[]).find(x=>x.id===sid);if(!s)return;if(!s.att)s.att={};s.att[n]=v;}
 function m2t(m){m=Math.max(GS,Math.min(m,GE));return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 
+// 日付から、その週（月曜日）を週キーとして取得。同じ週に属するイベント枠をまとめる際に使う。
+function evtWeekKey(ds){return fmt(monday(new Date(ds+'T00:00:00')));}
+// 指定週（wk=週キー）で既に使われている生徒名・自由入力ラベルの集合を返す
+// （その週の全イベント枠の参加者 ＋ 欠席ボックスに入っている生徒）。
+// 同じ生徒が同じ週の中で複数の枠に重複登録されるのを防ぐために使う。
+function evtUsedThisWeek(wk){
+  const set=new Set();
+  (D.evtSessions||[]).forEach(s=>{
+    if(evtWeekKey(s.date)===wk)(s.students||[]).forEach(n=>set.add(n));
+  });
+  ((D.evtAbsent&&D.evtAbsent[wk])||[]).forEach(n=>set.add(n));
+  return set;
+}
+// 「欠席」ボックスは、イベント枠と見た目・ドラッグ操作を揃えるため、擬似的なsid（'absent:週キー'）を持つ
+// 仮想の枠として扱う。sidを見て、本物のイベント枠か欠席ボックスかを判定する。
+function evtIsAbsentSid(sid){return typeof sid==='string'&&sid.indexOf('absent:')===0;}
+function evtAbsentWeekOf(sid){return sid.slice('absent:'.length);}
+
 let _evtDate=null;
 function openEvtCreateModal(ds,e){
   if(isConfirmed())return;
@@ -1981,7 +2002,9 @@ function openEvtAddStudent(){
 function renderEvtAddList(){
   const s=(D.evtSessions||[]).find(x=>x.id===_evtModalSid);if(!s)return;
   const q=(document.getElementById('evt-add-search').value||'').trim();
-  const already=new Set(s.students||[]);
+  // 同じ週の他のイベント枠・欠席ボックスに既に登録されている生徒は候補から除外する
+  // （1人が同じ週の複数の枠に重複登録されるのを防ぐ）
+  const already=evtUsedThisWeek(evtWeekKey(s.date));
   const roster=evtRoster().filter(n=>!already.has(n)&&(!q||n.includes(q)));
   const customs=(D.evtCustomLabels||[]).filter(n=>!already.has(n)&&(!q||n.includes(q)));
   let html='';
@@ -2017,6 +2040,12 @@ function addEvtCustomLabel(){
   const input=document.getElementById('evt-add-freeform');
   const name=input.value.trim();
   if(!name)return;
+  const s=(D.evtSessions||[]).find(x=>x.id===_evtModalSid);if(!s)return;
+  // 自由入力は候補チップと違って重複を事前に除外できないため、手入力時のみ明示的にチェックする
+  if(evtUsedThisWeek(evtWeekKey(s.date)).has(name)){
+    customConfirm(`「${name}」は今週すでに別の枠（または欠席）に登録されています。`,()=>{});
+    return;
+  }
   if(!D.evtCustomLabels)D.evtCustomLabels=[];
   if(!D.evtCustomLabels.includes(name))D.evtCustomLabels.push(name);
   input.value='';
@@ -2036,9 +2065,9 @@ function evtChipPointerDown(e,sid,name){
 function evtChipPointerMove(e){
   if(_evtDrag&&_evtDrag.pointerId===e.pointerId){
     _evtDrag.ghost.style.left=e.clientX+'px';_evtDrag.ghost.style.top=e.clientY+'px';
-    document.querySelectorAll('.evt-blk.drag-over').forEach(el=>el.classList.remove('drag-over'));
+    document.querySelectorAll('.evt-blk.drag-over,.evt-absent-blk.drag-over').forEach(el=>el.classList.remove('drag-over'));
     const el=document.elementFromPoint(e.clientX,e.clientY);
-    const blk=el&&el.closest&&el.closest('.evt-blk');
+    const blk=el&&el.closest&&el.closest('.evt-blk,.evt-absent-blk');
     if(blk)blk.classList.add('drag-over');
     return;
   }
@@ -2058,10 +2087,10 @@ function evtChipPointerMove(e){
 function evtChipPointerUp(e){
   if(_evtDrag&&_evtDrag.pointerId===e.pointerId){
     const {sid,name,ghost}=_evtDrag;
-    document.querySelectorAll('.evt-blk.drag-over').forEach(el=>el.classList.remove('drag-over'));
+    document.querySelectorAll('.evt-blk.drag-over,.evt-absent-blk.drag-over').forEach(el=>el.classList.remove('drag-over'));
     ghost.remove();
     const el=document.elementFromPoint(e.clientX,e.clientY);
-    const blk=el&&el.closest&&el.closest('.evt-blk');
+    const blk=el&&el.closest&&el.closest('.evt-blk,.evt-absent-blk');
     _evtDrag=null;
     if(blk){
       const toSid=blk.getAttribute('data-sid');
@@ -2076,18 +2105,57 @@ function evtChipPointerCancel(e){
   _evtDragPending=null;
 }
 function moveEvtStudent(fromSid,toSid,name){
-  const from=(D.evtSessions||[]).find(x=>x.id===fromSid);
-  const to=(D.evtSessions||[]).find(x=>x.id===toSid);
-  if(!from||!to)return;
-  from.students=(from.students||[]).filter(n=>n!==name);
-  const prevAtt=from.att&&from.att[name];
-  if(from.att)delete from.att[name];
-  if(!to.students)to.students=[];
-  if(!to.students.includes(name))to.students.push(name);
-  if(!to.att)to.att={};
-  if(!to.att[name])to.att[name]=prevAtt||'present';
+  let prevAtt=null;
+  // 移動元から取り除く（欠席ボックスなら配列から、通常のイベント枠ならstudents/attから）
+  if(evtIsAbsentSid(fromSid)){
+    const wk=evtAbsentWeekOf(fromSid);
+    if(D.evtAbsent&&D.evtAbsent[wk])D.evtAbsent[wk]=D.evtAbsent[wk].filter(n=>n!==name);
+  } else {
+    const from=(D.evtSessions||[]).find(x=>x.id===fromSid);
+    if(!from)return;
+    from.students=(from.students||[]).filter(n=>n!==name);
+    prevAtt=from.att&&from.att[name];
+    if(from.att)delete from.att[name];
+  }
+  // 移動先へ追加
+  if(evtIsAbsentSid(toSid)){
+    const wk=evtAbsentWeekOf(toSid);
+    if(!D.evtAbsent)D.evtAbsent={};
+    if(!D.evtAbsent[wk])D.evtAbsent[wk]=[];
+    if(!D.evtAbsent[wk].includes(name))D.evtAbsent[wk].push(name);
+  } else {
+    const to=(D.evtSessions||[]).find(x=>x.id===toSid);
+    if(!to)return;
+    if(!to.students)to.students=[];
+    if(!to.students.includes(name))to.students.push(name);
+    if(!to.att)to.att={};
+    if(!to.att[name])to.att[name]=prevAtt||'present';
+  }
   save();render();
   if(document.getElementById('evt-modal').style.display==='flex'&&(_evtModalSid===fromSid||_evtModalSid===toSid))renderEvtModal();
+}
+
+// 「欠席」ボックス: その週のイベント枠が1件でもある（または既に欠席登録済みの生徒がいる）場合のみ表示。
+// 他のイベント枠と同じチップ・同じドラッグ操作で生徒を出し入れできる、日付を持たない仮想の枠。
+function renderEvtAbsentBar(){
+  const bar=document.getElementById('evt-absent-bar');
+  if(!bar)return;
+  const wk=getWsKey();
+  const names=(D.evtAbsent&&D.evtAbsent[wk])||[];
+  const weekHasEvt=(D.evtSessions||[]).some(s=>evtWeekKey(s.date)===wk);
+  if(!weekHasEvt&&!names.length){bar.style.display='none';bar.innerHTML='';return;}
+  const sid='absent:'+wk;
+  const chips=names.map(n=>{
+    const en=n.replace(/'/g,"\\'");
+    const sc=evtStudentColor(n);
+    const scStyle=sc?`background:${sc.bg};color:${sc.tc};border-color:${sc.bord};`:'';
+    return `<span class="chip-evt" style="${scStyle}touch-action:none" onpointerdown="evtChipPointerDown(event,'${sid}','${en}')" onpointermove="evtChipPointerMove(event)" onpointerup="evtChipPointerUp(event)" onpointercancel="evtChipPointerCancel(event)">${n}</span>`;
+  }).join('');
+  bar.style.display='block';
+  bar.innerHTML=`<div class="evt-absent-blk" data-sid="${sid}" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f4f3f0;border:1.5px dashed #aaa;border-radius:6px;padding:6px 10px">
+    <span style="font-size:11px;font-weight:600;color:#777;flex-shrink:0">🚫 欠席（他の枠へ・から生徒名をドラッグして移動）</span>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">${chips||'<span style="font-size:11px;color:#bbb">なし</span>'}</div>
+  </div>`;
 }
 
 function addIv(){
@@ -2763,7 +2831,7 @@ function load(){
 }
 
 function initD(){
-  return{interviews:[],att:{},hols:[],tempHols:[],specials:[],confirmedWeeks:[],privateStudents:[...DEFAULT_PRI],priSel:{},evtSessions:[],evtCustomLabels:[],classes:[
+  return{interviews:[],att:{},hols:[],tempHols:[],specials:[],confirmedWeeks:[],privateStudents:[...DEFAULT_PRI],priSel:{},evtSessions:[],evtCustomLabels:[],evtAbsent:{},classes:[
     // ↓ サンプルクラスです。参考にしながら管理タブから実際のクラスを追加してください
     {id:'sample-1',dow:2,start:'16:00',end:'16:55',level:'E3/E4',textbook:'HiH1TiP1',color:'#eaf3de',subCid:'',kids:true,isPrivate:false,sd:{},students:['サンプル生徒A','サンプル生徒B']},
   ]};
